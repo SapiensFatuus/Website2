@@ -38,20 +38,27 @@
     </header>
 
     <!-- Main holds the unique content for this specific page. -->
-    <main class="page">
-        <!-- Section groups the hero content into one meaningful block. -->
-        <section class="hero">
-            <!-- h1 is the most important heading on the page. -->
-            <h1>Study smarter with AI</h1>
-            <!-- Paragraphs hold normal text and explain the purpose of the site. -->
-            <p>
-                A simple starter homepage for an AI-powered study tool for AP exams,
-                SATs, MAPs, and other standardized tests.
-            </p>
-            <!-- A link can be styled like a button using CSS. -->
-            <a class="button" href="about.html">Learn more</a>
-            <!-- This sends the user to the About page for more information. -->
+    <main class="page page-home-main">
+        <!-- Search section spans the full homepage experience. -->
+        <section class="search-hero">
+            <!-- Heading introduces the search experience. -->
+            <h1>What do you want to study?</h1>
+            <!-- Search input for discovering topics. -->
+            <input
+                type="text"
+                id="searchInput"
+                class="search-input"
+                placeholder="Search topics (e.g., SAT: Math, AP Chemistry)..."
+                aria-label="Search study topics"
+            />
+            <!-- Autocomplete dropdown appears below the search input. -->
+            <div
+                id="searchDropdown"
+                class="search-dropdown"
+                role="listbox"
+                aria-label="Search results"
+            ></div>
         </section>
-    </main>
-</body>
+    </main>    <!-- Script is loaded at the end so the page content loads first. -->
+    <script src="script.js"></script></body>
 </html>

@@ -102,7 +102,7 @@ body {
 	font-weight: 600;
 	padding: 8px 12px;
 	border-radius: 999px;
-	transition: background 0.2s ease, transform 0.2s ease;
+	transition: background 0.2s ease;
 }
 
 body.page-home .nav-links a[href="index.html"],
@@ -115,10 +115,8 @@ body.page-contacts .nav-links a[href="contacts.html"] {
 
 /* hover is the state used when the pointer is over a link. */
 /* background adds a soft highlight. */
-/* transform moves the link slightly upward. */
 .nav-links a:hover {
 	background: rgba(255, 255, 255, 0.15);
-	transform: translateY(-1px);
 }
 
 /* page wraps the main content and gives it room away from the edges. */
@@ -186,7 +184,12 @@ body.page-contacts .nav-links a[href="contacts.html"] {
 
 /* hover changes the button color when the user points at it. */
 .button:hover {
-	background: #383838;
+	outline: 2px solid #383838;
+	outline-offset: 2px;
+}
+
+.back-link:hover {
+	text-decoration: underline;
 }
 
 /* content-card is reused on the About and Contacts pages. */
@@ -229,5 +232,313 @@ body.page-contacts .nav-links a[href="contacts.html"] {
 	.hero,
 	.content-card {
 		padding: 32px 20px;
+	}
+}
+
+/* ============================================================================
+   SEARCH BAR STYLES (HOMEPAGE)
+   ============================================================================ */
+
+/* page-home-main customizes the page wrapper specifically for the homepage. */
+.page-home-main {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: calc(100vh - 200px);
+	padding: 40px 20px;
+}
+
+/* search-hero is the main container for search on the homepage. */
+/* It's larger and more prominent than the old hero section. */
+.search-hero {
+	max-width: 700px;
+	width: 100%;
+	text-align: center;
+	position: relative;
+}
+
+/* search-hero h1 is the main heading above the search input. */
+.search-hero h1 {
+	margin: 0 0 40px;
+	font-size: clamp(2rem, 5vw, 3.5rem);
+	color: #222;
+}
+
+/* search-input is the main search box. */
+/* It's large and prominent to draw user attention. */
+.search-input {
+	width: 100%;
+	max-width: 600px;
+	padding: 18px 24px;
+	font-size: 1.1rem;
+	border: 2px solid #6b6b6b;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.95);
+	color: #222;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	font-weight: 500;
+}
+
+/* Focus state makes the input feel responsive. */
+.search-input:focus {
+	outline: none;
+	border-color: #4f4f4f;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Placeholder text styling. */
+.search-input::placeholder {
+	color: #999;
+}
+
+/* search-dropdown contains autocomplete results. */
+/* It appears below the search input with a list of matching topics. */
+.search-dropdown {
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	margin-top: 8px;
+	width: 100%;
+	max-width: 600px;
+	background: rgba(255, 255, 255, 0.98);
+	border: 1px solid rgba(0, 0, 0, 0.12);
+	border-radius: 16px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+	max-height: 400px;
+	overflow-y: auto;
+	z-index: 1000;
+	display: none;
+}
+
+/* search-result-item is each individual result in the dropdown. */
+.search-result-item {
+	padding: 14px 20px;
+	cursor: pointer;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+	color: #333;
+	font-size: 1rem;
+	transition: background 0.15s ease;
+}
+
+/* Hover effect for readability. */
+.search-result-item:hover {
+	background: rgba(107, 107, 107, 0.08);
+}
+
+/* Last item should not have a border. */
+.search-result-item:last-child {
+	border-bottom: none;
+}
+
+/* Message when no results are found. */
+.search-no-results {
+	padding: 20px;
+	text-align: center;
+	color: #999;
+	font-style: italic;
+}
+
+/* ============================================================================
+   TOPIC PAGE STYLES
+   ============================================================================ */
+
+/* topic-hero is the header section on the topic overview page. */
+.topic-hero {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 24px;
+	max-width: 900px;
+	margin: 0 auto 32px;
+	padding: 0 20px;
+}
+
+.topic-hero-copy {
+	flex: 1 1 320px;
+	min-width: 240px;
+}
+
+.topic-hero h1 {
+	margin: 0;
+	font-size: clamp(2rem, 6vw, 3.5rem);
+	color: #222;
+	line-height: 1.05;
+}
+
+.topic-overview-card {
+	flex: 0 0 min(420px, 100%);
+	background: rgba(255, 255, 255, 0.95);
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	border-radius: 20px;
+	padding: 18px 18px 16px;
+}
+
+.topic-stat-row {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.topic-stat-item {
+	padding: 12px;
+	background: #fafafa;
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	border-radius: 16px;
+	text-align: center;
+}
+
+.topic-stat-label {
+	font-size: 0.85rem;
+	color: #666;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	margin-bottom: 8px;
+}
+
+.topic-stat-value {
+	font-size: 1.4rem;
+	font-weight: 700;
+	color: #222;
+}
+
+.topic-summary {
+	max-width: 900px;
+	margin: 0 auto 36px;
+	padding: 0 20px;
+}
+
+.summary-card {
+	background: rgba(255, 255, 255, 0.95);
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	border-radius: 20px;
+	padding: 24px;
+	color: #333;
+}
+
+.summary-card p {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.7;
+}
+
+.topic-actions {
+	max-width: 900px;
+	margin: 0 auto;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 18px;
+	padding: 0 20px;
+}
+
+.topic-actions-intro {
+	grid-column: 1 / -1;
+	text-align: left;
+	color: #444;
+	font-size: 1rem;
+	margin-bottom: 4px;
+}
+
+.topic-action-btn {
+	padding: 22px 20px;
+	background: #d34b4b;
+	border: 2px solid transparent;
+	border-radius: 24px;
+	cursor: pointer;
+	font-size: 1rem;
+	font-weight: 700;
+	color: #ffffff;
+	text-align: center;
+	transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.09);
+}
+
+.topic-action-btn:hover {
+	background: #5f1313;
+	border-color: #ffd54f;
+	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+.topic-action-btn:focus {
+	outline: 3px solid #ffd54f;
+	outline-offset: 4px;
+}
+
+.topic-back-link {
+	text-decoration: none;
+	color: #4f4f4f;
+}
+
+.topic-back-link:hover {
+	text-decoration: underline;
+}
+
+/* study-methods is the grid container for study options. */
+.study-methods {
+	max-width: 800px;
+	margin: 0 auto;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 24px;
+	padding: 0 20px;
+}
+
+/* study-method-btn is each study option button/card. */
+.study-method-btn {
+	padding: 32px 24px;
+	background: rgba(255, 255, 255, 0.72);
+	border: 2px solid rgba(107, 107, 107, 0.2);
+	border-radius: 16px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-size: 1rem;
+	font-weight: 600;
+	color: #333;
+	text-align: center;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Hover effect makes buttons feel interactive. */
+.study-method-btn:hover {
+	background: rgba(255, 255, 255, 0.9);
+	border-color: #6b6b6b;
+}
+
+/* Active/focus state for keyboard navigation. */
+.study-method-btn:focus {
+	outline: 2px solid #6b6b6b;
+	outline-offset: 2px;
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+	/* Adjust search positioning on smaller screens. */
+	.search-dropdown {
+		width: 100%;
+		max-width: none;
+	}
+
+	/* Larger padding on small screens for touch. */
+	.search-result-item {
+		padding: 16px 20px;
+	}
+
+	/* Grid adjusts to single column on very small screens. */
+	.study-methods {
+		grid-template-columns: 1fr;
+	}
+
+	/* Topic hero on mobile. */
+	.topic-hero {
+		margin-bottom: 40px;
+	}
+
+	.topic-hero h1 {
+		font-size: 2rem;
 	}
 }
