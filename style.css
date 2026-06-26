@@ -113,6 +113,40 @@ body.page-contacts .nav-links a[href="contacts.html"] {
 	text-underline-offset: 0.2em;
 }
 
+.topbar {
+	max-height: 72px;
+}
+
+.topbar-counters {
+	display: left;
+	flex-direction: column;
+    align-items: flex-start;
+	gap: 1px;
+	color: rgb(58, 58, 58);
+	font-size: 0.875rem;
+	line-height: 15px;
+	white-space: nowrap;
+    margin-right: auto;
+    
+}
+
+
+.counter-item {
+	display: flex;
+	flex-direction: row;
+    align-items: flex-start;
+	gap: 20px;
+}
+
+.counter-label {
+	font-weight: 100;
+	opacity: 0.88;
+}
+
+.counter-value {
+	font-weight: 100;
+}
+
 /* hover is the state used when the pointer is over a link. */
 /* background adds a soft highlight. */
 .nav-links a:hover {
@@ -542,3 +576,4 @@ body.page-contacts .nav-links a[href="contacts.html"] {
 		font-size: 2rem;
 	}
 }
+
