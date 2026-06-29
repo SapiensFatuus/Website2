@@ -1,9 +1,10 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
+import os
 import time
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": os.getenv("CORS_ORIGINS", "*")}})
 
 # --- tracking storage ---
 active_users = set()
@@ -69,4 +70,7 @@ def stats():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "5000"))
+    debug = os.getenv("FLASK_DEBUG", "false").lower() in {"1", "true", "yes", "on"}
+    app.run(host=host, port=port, debug=debug)

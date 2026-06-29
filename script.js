@@ -278,15 +278,12 @@ function initTopicPage() {
 
 
 const TRACKER_BASE = (() => {
-  const origin = window.location.origin;
-  if (origin === "null") return "http://127.0.0.1:5000";
-  if (
-    origin.startsWith("http://127.0.0.1:5000") ||
-    origin.startsWith("http://localhost:5000")
-  ) {
-    return origin;
-  }
-  return "http://127.0.0.1:5000";
+    const configuredUrl = window.__TRACKER_API_URL__ || "";
+    if (configuredUrl) {
+        return configuredUrl.replace(/\/$/, "");
+    }
+
+    return window.location.origin;
 })();
 
 function trackerUrl(path) {
