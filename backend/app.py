@@ -17,6 +17,11 @@ last_seen = {}
 TIMEOUT = 30  # seconds before a user is considered inactive
 
 
+@app.route("/")
+def health_check():
+    return jsonify({"status": "ok", "service": "study-ai-tracker"})
+
+
 def cleanup_inactive_users():
     """Remove users who haven't pinged recently."""
     global active_users
