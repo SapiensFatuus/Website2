@@ -1,9 +1,14 @@
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { onRequest } from 'firebase-functions/v2/https'
+import { onCallGenkit } from 'firebase-functions/https'
+import { defineSecret } from 'firebase-functions/params'
 import { logger } from 'firebase-functions'
+import { satMathTutorFlow } from './satMathTutor.js'
 
 initializeApp()
+
+const googleGenAiApiKey = defineSecret('GOOGLE_GENAI_API_KEY')
 
 const db = getFirestore()
 const ACTIVE_USER_TIMEOUT_MS = 30_000
@@ -175,4 +180,16 @@ export const api = onRequest(
     invoker: 'public',
   },
   trackerHandler,
+)
+
+export const satMathTutor = onCallGenkit(
+  {
+    secrets: [googleGenAiApiKey],
+    // Switch to true after App Check is configured for Hosting and local debug tokens.
+    enforceAppCheck: false,
+    cors: true,
+    maxInstances: 10,
+    timeoutSeconds: 60,
+  },
+  satMathTutorFlow,
 )

@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getAnalytics, isSupported, logEvent } from 'firebase/analytics'
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCxBAijhhqy9V6VFgz6rudUMTecsOj8NxU',
@@ -12,6 +13,14 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
+const appCheckSiteKey = import.meta.env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY
+
+if (typeof window !== 'undefined' && appCheckSiteKey) {
+  initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
+    isTokenAutoRefreshEnabled: true,
+  })
+}
 const analyticsPromise =
   typeof window === 'undefined'
     ? Promise.resolve(null)
@@ -19,7 +28,7 @@ const analyticsPromise =
         .then((supported) => (supported ? getAnalytics(app) : null))
         .catch(() => null)
 
-export { analyticsPromise }
+export { analyticsPromise, app }
 
 export async function trackEvent(eventName, eventParams = {}) {
   const analytics = await analyticsPromise

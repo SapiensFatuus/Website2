@@ -2,8 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { startTracker } from './firebaseTracker'
 import { trackEvent } from './firebase'
-import { AboutPage, ContactsPage, HomePage, TopicPage, Topbar } from './components'
-import { findTopicBySlug, getTopicStats, topics } from './siteData'
+import { AboutPage, ContactsPage, HomePage, TopicBrowserPage, TopicPage, Topbar } from './components'
+import { findTopicBySlug, topics } from './siteData'
+import { QuestionPage } from './questions/QuestionPage'
+import { getPracticeFilters } from './taxonomy/contentTaxonomy'
+import { ChatPage } from './chat/ChatPage'
 
 function getCurrentLocation() {
   return {
@@ -33,6 +36,18 @@ function getPageClassName(pathname) {
 
   if (normalizedPath.endsWith('/topic.html') || normalizedPath === '/topic.html') {
     return 'page-topic'
+  }
+
+  if (normalizedPath.endsWith('/questions.html') || normalizedPath === '/questions.html') {
+    return 'page-questions'
+  }
+
+  if (normalizedPath.endsWith('/topics.html') || normalizedPath === '/topics.html') {
+    return 'page-topic-browser'
+  }
+
+  if (normalizedPath.endsWith('/chat.html') || normalizedPath === '/chat.html') {
+    return 'page-chat'
   }
 
   return 'page-home'
@@ -110,7 +125,7 @@ function App() {
     const params = new URLSearchParams(route.search)
     const topic = findTopicBySlug(params.get('topic'))
     document.title = topic
-      ? `${topic.title} | Study AI Helper`
+      ? `${currentPageClassName === 'page-questions' ? 'Questions · ' : ''}${topic.title} | Study AI Helper`
       : 'Topic Not Found | Study AI Helper'
   }, [currentPageClassName, route.search])
 
@@ -149,7 +164,7 @@ function App() {
   }, [query])
 
   const selectedTopic = useMemo(() => {
-    if (currentPageClassName !== 'page-topic') {
+    if (!['page-topic', 'page-topic-browser', 'page-questions', 'page-chat'].includes(currentPageClassName)) {
       return null
     }
 
@@ -196,7 +211,12 @@ function App() {
     const method = event.currentTarget.getAttribute('data-method')
 
     if (method === 'View Topics') {
-      navigateTo('/index.html')
+      navigateTo(selectedTopic?.slug === 'sat-math' ? '/topics.html?topic=sat-math' : '/index.html')
+      return
+    }
+
+    if (method === 'Practice Questions' && selectedTopic) {
+      navigateTo(`/questions.html?topic=${selectedTopic.slug}`)
       return
     }
 
@@ -205,12 +225,14 @@ function App() {
 
   return (
     <div className={`site-shell ${currentPageClassName}`}>
-      <Topbar
-        pageClassName={currentPageClassName}
-        showCounters={currentPageClassName === 'page-home'}
-        stats={stats}
-        onNavigate={createNavigationHandler}
-      />
+      {currentPageClassName !== 'page-questions' ? (
+        <Topbar
+          pageClassName={currentPageClassName}
+          showCounters={currentPageClassName === 'page-home'}
+          stats={stats}
+          onNavigate={createNavigationHandler}
+        />
+      ) : null}
       {currentPageClassName === 'page-home' ? (
         <HomePage
           query={query}
@@ -225,9 +247,38 @@ function App() {
       {currentPageClassName === 'page-topic' ? (
         <TopicPage
           topic={selectedTopic}
-          stats={getTopicStats(selectedTopic?.slug)}
           onActionClick={handleTopicActionClick}
           onNavigate={createNavigationHandler}
+        />
+      ) : null}
+      {currentPageClassName === 'page-topic-browser' ? (
+        <TopicBrowserPage
+          key={route.search}
+          topic={selectedTopic}
+          domainId={new URLSearchParams(route.search).get('domain')}
+          skillId={new URLSearchParams(route.search).get('skill')}
+          onNavigate={createNavigationHandler}
+        />
+      ) : null}
+      {currentPageClassName === 'page-questions' ? (
+        <QuestionPage
+          key={route.search}
+          topic={selectedTopic}
+          initialFilters={getPracticeFilters(selectedTopic?.slug, {
+            domainId: new URLSearchParams(route.search).get('domain'),
+            skillId: new URLSearchParams(route.search).get('skill'),
+          })}
+          onNavigate={navigateTo}
+        />
+      ) : null}
+      {currentPageClassName === 'page-chat' ? (
+        <ChatPage
+          key={route.search}
+          examId={new URLSearchParams(route.search).get('exam')}
+          subjectId={new URLSearchParams(route.search).get('topic')}
+          domainId={new URLSearchParams(route.search).get('domain')}
+          skillId={new URLSearchParams(route.search).get('skill')}
+          onNavigate={navigateTo}
         />
       ) : null}
       {currentPageClassName === 'page-about' ? <AboutPage /> : null}

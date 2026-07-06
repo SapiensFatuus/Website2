@@ -2,6 +2,73 @@
 
 This project is now set up to use Firebase as its primary hosting path, with a small Firebase Functions backend for the live visitor tracker.
 
+## SAT Math AI tutor prototype
+
+One skill, `sat:math:algebra:linear-equations-one-variable`, has an enabled AI tutor. The tutor uses a small manually curated set of material explicitly labeled as original prototype samples. It does not contain copied SAT or commercial test questions.
+
+The browser defaults to safe local mock mode. No API key is needed and no request leaves the browser:
+
+```bash
+copy .env.example .env.local
+npm run dev
+```
+
+Open SAT Math, choose **View Topics**, expand **Algebra**, and select **Ask AI** beside **Linear equations in one variable**.
+
+### Configure Gemini and deploy
+
+The Gemini credential belongs only in Firebase Secret Manager. Never add it to `.env`, `site/firebase.js`, or any `VITE_*` variable.
+
+1. Upgrade the Firebase project to Blaze and enable Secret Manager/Cloud Functions when prompted.
+2. Create a Gemini Developer API key in Google AI Studio.
+3. From `my-site`, store it as a Firebase Functions secret:
+
+   ```bash
+   npx firebase-tools functions:secrets:set GOOGLE_GENAI_API_KEY
+   ```
+
+4. Install and deploy the backend:
+
+   ```bash
+   npm install --prefix functions
+   npm run deploy:backend
+   ```
+
+5. Set `VITE_CHAT_MODE=firebase` in `.env.production`, then build and deploy Hosting:
+
+   ```bash
+   npm run deploy:hosting
+   ```
+
+The exported callable is `satMathTutor` in `us-central1`. Its input is validated canonical taxonomy data, a message of at most 1,200 characters, and at most 10 history messages.
+
+### Try Gemini locally with emulators
+
+Create `functions/.secret.local` containing `GOOGLE_GENAI_API_KEY=your-key` (this file is ignored by Firebase tooling and must never be committed). Set these in `.env.local`:
+
+```text
+VITE_CHAT_MODE=firebase
+VITE_USE_FUNCTIONS_EMULATOR=true
+```
+
+Then run the Functions emulator and Vite in separate terminals:
+
+```bash
+npx firebase-tools emulators:start --only functions
+npm run dev
+```
+
+### Enable App Check enforcement
+
+The client already initializes reCAPTCHA Enterprise App Check when `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` is present, and callable requests automatically carry its token. To enforce it:
+
+1. Register the web app with App Check in Firebase Console using reCAPTCHA Enterprise.
+2. Put the public site key in `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` and redeploy Hosting.
+3. Verify valid requests in App Check metrics.
+4. Change `enforceAppCheck` to `true` on `satMathTutor` in `functions/index.js` and redeploy Functions.
+
+Enforcement is intentionally `false` during the prototype so mock/local development is not blocked. The Gemini secret remains server-only either way.
+
 The app already includes:
 
 - Firebase Hosting for the built Vite app in `dist/`
