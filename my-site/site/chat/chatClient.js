@@ -1,6 +1,6 @@
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions'
-import { createMockTutorResponse } from '../../functions/satMathTutorCore.js'
 import { app } from '../firebase.js'
+import { createMockTutorResponse } from './mockTutor.js'
 
 export const CHAT_MODE = import.meta.env.VITE_CHAT_MODE === 'firebase' ? 'firebase' : 'mock'
 let callableTutor = null

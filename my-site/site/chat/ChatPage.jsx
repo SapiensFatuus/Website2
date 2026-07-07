@@ -22,7 +22,7 @@ export function ChatPage({ examId, subjectId, domainId, skillId, onNavigate }) {
   const target = resolveSubjectLocation(subjectId, { domainId, skillId })
   const isValid = target.status === 'valid'
     && target.subject?.examId === examId
-    && target.skill?.tutorEnabled
+    && target.skill?.tutor
   const [state, dispatch] = useReducer(chatReducer, initialChatState)
   const [draft, setDraft] = useState('')
   const inputRef = useRef(null)
@@ -31,7 +31,7 @@ export function ChatPage({ examId, subjectId, domainId, skillId, onNavigate }) {
     return (
       <main className="chat-empty-page">
         <h1>AI tutor not available</h1>
-        <p>This prototype only supports one configured SAT Math skill.</p>
+        <p>This SAT Math skill does not have an approved tutor context pack yet.</p>
         <button type="button" onClick={() => onNavigate('/topics.html?topic=sat-math')}>Browse SAT Math skills</button>
       </main>
     )
@@ -83,8 +83,8 @@ export function ChatPage({ examId, subjectId, domainId, skillId, onNavigate }) {
         <div className="chat-messages" aria-live="polite">
           {state.messages.length === 0 ? (
             <div className="chat-welcome">
-              <h2>Ask about a linear equation</h2>
-              <p>Try “How do I solve 3x + 5 = 20?” or ask for an alternative method.</p>
+              <h2>{target.skill.tutor.promptTitle}</h2>
+              <p>Try “{target.skill.tutor.suggestedQuestion}” or ask for an alternative method.</p>
               <p>The tutor will name the original sample material it used. If its context is insufficient, it will say so.</p>
             </div>
           ) : state.messages.map((message, index) => (

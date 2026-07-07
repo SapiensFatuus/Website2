@@ -1,5 +1,17 @@
 export const TAXONOMY_VERSION = 1
-export const TUTOR_ENABLED_SKILL_ID = 'linear-equations-one-variable'
+
+export const tutorCapabilities = Object.freeze({
+  'linear-equations-one-variable': Object.freeze({
+    provider: 'sat-math-tutor',
+    promptTitle: 'Ask about a linear equation',
+    suggestedQuestion: 'How do I solve 3x + 5 = 20?',
+  }),
+  'linear-functions': Object.freeze({
+    provider: 'sat-math-tutor',
+    promptTitle: 'Ask about a linear function',
+    suggestedQuestion: 'How do I find the slope and y-intercept of f(x) = 3x - 4?',
+  }),
+})
 
 export const questionTypes = [
   { id: 'multiple-choice', label: 'Multiple Choice', renderer: 'multiple-choice' },
@@ -62,7 +74,7 @@ const satMathDomains = [
   ...domain,
   skills: domain.skills.map(([id, label, description], index) => ({
     id, label, description, order: index + 1, domainId: domain.id,
-    tutorEnabled: id === TUTOR_ENABLED_SKILL_ID,
+    tutor: tutorCapabilities[id] || null,
   })),
 }))
 
@@ -125,7 +137,7 @@ export function createSkillPracticeUrl(subjectId, skillId) {
 export function createSkillChatUrl(subjectId, skillId) {
   const subject = getSubject(subjectId)
   const skill = getSkill(subjectId, skillId)
-  if (!subject || !skill?.tutorEnabled) return null
+  if (!subject || !skill?.tutor) return null
   return `/chat.html?exam=${encodeURIComponent(subject.examId)}&topic=${encodeURIComponent(subjectId)}&domain=${encodeURIComponent(skill.domainId)}&skill=${encodeURIComponent(skill.id)}`
 }
 

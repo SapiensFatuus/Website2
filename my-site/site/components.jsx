@@ -569,7 +569,7 @@ export function TopicBrowserPage({ topic, domainId, skillId, onNavigate }) {
                           >
                             Practice this skill
                           </a>
-                          {skill.tutorEnabled ? (
+                          {skill.tutor ? (
                             <a
                               className="skill-ai-button enabled"
                               href={createSkillChatUrl(topic.slug, skill.id)}
