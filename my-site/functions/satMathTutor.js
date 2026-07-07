@@ -1,4 +1,4 @@
-import { googleAI } from '@genkit-ai/google-genai'
+import { vertexAI } from '@genkit-ai/google-genai'
 import { genkit, z } from 'genkit'
 import {
   buildTutorPrompt,
@@ -27,7 +27,7 @@ export const TutorOutputSchema = z.object({
   insufficient: z.boolean(),
 })
 
-const ai = genkit({ plugins: [googleAI()] })
+const ai = genkit({ plugins: [vertexAI({ location: 'us-central1' })] })
 
 export const satMathTutorFlow = ai.defineFlow(
   {
@@ -42,7 +42,7 @@ export const satMathTutorFlow = ai.defineFlow(
     if (!materials.length) return createInsufficientContextResponse()
 
     const response = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash'),
+      model: vertexAI.model('gemini-2.5-flash'),
       prompt: buildTutorPrompt({ ...validation.value, materials }),
       output: { schema: TutorOutputSchema },
       config: { temperature: 0.2, maxOutputTokens: 900 },

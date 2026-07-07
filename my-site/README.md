@@ -15,26 +15,20 @@ npm run dev
 
 Open SAT Math, choose **View Topics**, expand **Algebra**, and select **Ask AI** beside **Linear equations in one variable**.
 
-### Configure Gemini and deploy
+### Configure Vertex AI Gemini and deploy
 
-The Gemini credential belongs only in Firebase Secret Manager. Never add it to `.env`, `site/firebase.js`, or any `VITE_*` variable.
+The tutor uses Vertex AI with the Cloud Function's service account. No Gemini API key or browser credential is used.
 
-1. Upgrade the Firebase project to Blaze and enable Secret Manager/Cloud Functions when prompted.
-2. Create a Gemini Developer API key in Google AI Studio.
-3. From `my-site`, store it as a Firebase Functions secret:
-
-   ```bash
-   npx firebase-tools functions:secrets:set GOOGLE_GENAI_API_KEY
-   ```
-
-4. Install and deploy the backend:
+1. Upgrade the Firebase project to Blaze and enable the Vertex AI API.
+2. Grant `roles/aiplatform.user` to the default compute service account (`PROJECT_NUMBER-compute@developer.gserviceaccount.com`).
+3. Install and deploy the backend:
 
    ```bash
    npm install --prefix functions
    npm run deploy:backend
    ```
 
-5. Set `VITE_CHAT_MODE=firebase` in `.env.production`, then build and deploy Hosting:
+4. Set `VITE_CHAT_MODE=firebase` in `.env.production`, then build and deploy Hosting:
 
    ```bash
    npm run deploy:hosting
@@ -44,7 +38,13 @@ The exported callable is `satMathTutor` in `us-central1`. Its input is validated
 
 ### Try Gemini locally with emulators
 
-Create `functions/.secret.local` containing `GOOGLE_GENAI_API_KEY=your-key` (this file is ignored by Firebase tooling and must never be committed). Set these in `.env.local`:
+For local Vertex AI calls, install the Google Cloud CLI and authenticate Application Default Credentials:
+
+```bash
+gcloud auth application-default login --project website2-c8d1e
+```
+
+Then set these in `.env.local`:
 
 ```text
 VITE_CHAT_MODE=firebase
@@ -67,7 +67,7 @@ The client already initializes reCAPTCHA Enterprise App Check when `VITE_RECAPTC
 3. Verify valid requests in App Check metrics.
 4. Change `enforceAppCheck` to `true` on `satMathTutor` in `functions/index.js` and redeploy Functions.
 
-Enforcement is intentionally `false` during the prototype so mock/local development is not blocked. The Gemini secret remains server-only either way.
+Enforcement is intentionally `false` during the prototype so mock/local development is not blocked. Vertex AI authentication remains server-side either way.
 
 The app already includes:
 
