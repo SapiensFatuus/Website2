@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { startTracker } from './firebaseTracker'
 import { trackEvent } from './firebase'
@@ -6,7 +6,8 @@ import { AboutPage, ContactsPage, HomePage, TopicBrowserPage, TopicPage, Topbar 
 import { findTopicBySlug, topics } from './siteData'
 import { QuestionPage } from './questions/QuestionPage'
 import { getPracticeFilters } from './taxonomy/contentTaxonomy'
-import { ChatPage } from './chat/ChatPage'
+
+const ChatPage = lazy(() => import('./chat/ChatPage').then((module) => ({ default: module.ChatPage })))
 
 function getCurrentLocation() {
   return {
@@ -272,14 +273,16 @@ function App() {
         />
       ) : null}
       {currentPageClassName === 'page-chat' ? (
-        <ChatPage
-          key={route.search}
-          examId={new URLSearchParams(route.search).get('exam')}
-          subjectId={new URLSearchParams(route.search).get('topic')}
-          domainId={new URLSearchParams(route.search).get('domain')}
-          skillId={new URLSearchParams(route.search).get('skill')}
-          onNavigate={navigateTo}
-        />
+        <Suspense fallback={<main className="chat-empty-page"><p>Loading math tutor…</p></main>}>
+          <ChatPage
+            key={route.search}
+            examId={new URLSearchParams(route.search).get('exam')}
+            subjectId={new URLSearchParams(route.search).get('topic')}
+            domainId={new URLSearchParams(route.search).get('domain')}
+            skillId={new URLSearchParams(route.search).get('skill')}
+            onNavigate={navigateTo}
+          />
+        </Suspense>
       ) : null}
       {currentPageClassName === 'page-about' ? <AboutPage /> : null}
       {currentPageClassName === 'page-contacts' ? <ContactsPage /> : null}

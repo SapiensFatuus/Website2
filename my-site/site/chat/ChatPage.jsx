@@ -1,8 +1,22 @@
 import { useReducer, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import rehypeKatex from 'rehype-katex'
+import remarkMath from 'remark-math'
+import 'katex/dist/katex.min.css'
 import { resolveSubjectLocation } from '../taxonomy/contentTaxonomy'
 import { CHAT_MODE, getChatErrorMessage, requestTutorReply } from './chatClient'
 import { chatReducer, initialChatState } from './chatState'
 import './ChatPage.css'
+
+function MathMessage({ children }) {
+  return (
+    <div className="chat-message-content">
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+        {children}
+      </ReactMarkdown>
+    </div>
+  )
+}
 
 export function ChatPage({ examId, subjectId, domainId, skillId, onNavigate }) {
   const target = resolveSubjectLocation(subjectId, { domainId, skillId })
@@ -76,7 +90,9 @@ export function ChatPage({ examId, subjectId, domainId, skillId, onNavigate }) {
           ) : state.messages.map((message, index) => (
             <article className={`chat-message ${message.role}`} key={`${message.role}-${index}`}>
               <strong>{message.role === 'user' ? 'You' : 'Tutor'}</strong>
-              <p>{message.content || message.answer}</p>
+              {message.role === 'assistant'
+                ? <MathMessage>{message.content || message.answer}</MathMessage>
+                : <p>{message.content || message.answer}</p>}
               {message.role === 'assistant' ? (
                 <div className="chat-sources">
                   {message.insufficient

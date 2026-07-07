@@ -14,23 +14,23 @@ export const SAT_MATH_TUTOR_CONTEXT = Object.freeze({
       id: 'original-sample-1',
       label: 'Original sample problem 1',
       problem: 'Solve 3x + 5 = 20.',
-      explanation: 'Subtract 5 from both sides to get 3x = 15. Divide both sides by 3, so x = 5. Check: 3(5) + 5 = 20.',
-      alternativeMethod: 'Work backward from 20: undo adding 5, then undo multiplying by 3.',
+      explanation: 'Subtract $5$ from both sides to get $3x = 15$. Divide both sides by $3$: $$\\frac{3x}{3} = \\frac{15}{3}$$ Therefore, $x = 5$. Check: $3(5) + 5 = 20$.',
+      alternativeMethod: 'Work backward from $20$: undo adding $5$, then undo multiplying by $3$.',
       keywords: ['3x', '20', 'solve', 'equation', 'subtract', 'divide'],
     },
     {
       id: 'original-sample-2',
       label: 'Original sample problem 2',
       problem: 'A streaming plan costs $8 plus $3 per movie. The bill is $29. How many movies were rented?',
-      explanation: 'Let m be the number of movies. Write 8 + 3m = 29. Subtract 8 to get 3m = 21, then divide by 3. The answer is 7 movies.',
-      alternativeMethod: 'Remove the fixed $8 charge first. The remaining $21 represents equal $3 movie charges, so 21 ÷ 3 = 7.',
+      explanation: 'Let $m$ be the number of movies. Write $8 + 3m = 29$. Subtract $8$ to get $3m = 21$, then divide by $3$: $$m = \\frac{21}{3} = 7$$ The answer is $7$ movies.',
+      alternativeMethod: 'Remove the fixed $8 charge first. The remaining $21 represents equal $3 movie charges, so $21 \\div 3 = 7$.',
       keywords: ['streaming', 'movie', 'bill', 'cost', '29', 'word problem'],
     },
     {
       id: 'original-sample-3',
       label: 'Original sample problem 3',
       problem: 'Solve 4(x - 2) = 2x + 10.',
-      explanation: 'Distribute to get 4x - 8 = 2x + 10. Subtract 2x from both sides, then add 8: 2x = 18. Divide by 2, so x = 9.',
+      explanation: 'Distribute to get $4x - 8 = 2x + 10$. Subtract $2x$ from both sides, then add $8$: $2x = 18$. Divide by $2$: $$x = \\frac{18}{2} = 9$$',
       alternativeMethod: 'After distributing, collect variable terms on one side and constants on the other in whichever order feels clearest.',
       keywords: ['4(x', '2x', 'distribute', 'parentheses', 'equation', 'solve'],
     },
@@ -119,6 +119,9 @@ Rules:
 - Explain the solution step by step in clear language.
 - Offer an alternative solving method when the supplied material supports one.
 - Identify every supplied material item used by its exact source ID.
+- Format the answer as readable Markdown. Put inline mathematics inside single dollar signs, such as $x = 5$.
+- Put important multi-line equations inside double dollar signs. Use LaTeX commands such as \\frac{a}{b}, \\sqrt{x}, and x^{2}; never imitate a fraction with plain text like "a / b".
+- Return material IDs only in the sourceIds field, not inside the answer prose.
 - If the supplied material is insufficient, set insufficient to true, use no source IDs, and plainly admit the limitation. Do not invent facts, problems, or sources.
 - Keep the answer focused on this skill.
 

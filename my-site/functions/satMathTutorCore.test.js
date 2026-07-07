@@ -42,6 +42,8 @@ test('prompt requires grounding, source IDs, steps, alternatives, and honest lim
   assert.match(prompt, /exact source ID/i)
   assert.match(prompt, /insufficient/i)
   assert.match(prompt, /Do not invent/i)
+  assert.match(prompt, /\\frac\{a\}\{b\}/)
+  assert.match(prompt, /never imitate a fraction with plain text/i)
 })
 
 test('mock admits when supplied context is insufficient', () => {
