@@ -11,11 +11,17 @@ test('chat starts empty and transitions through loading and success', () => {
   assert.equal(loading.messages[0].content, request.message)
   const ready = chatReducer(loading, {
     type: 'success',
-    response: { answer: 'Step 1', sourceIds: ['original-sample-1'], insufficient: false, mode: 'mock' },
+    response: {
+      answer: 'Step 1', sourceIds: ['original-sample-1'], insufficient: false, mode: 'mock',
+      effectiveTarget: { scope: 'skill', skillId: 'linear-equations-one-variable' },
+      scopeNotice: 'Adjusted to equations.', classification: 'adjusted-within-subject',
+    },
   })
   assert.equal(ready.status, 'ready')
   assert.equal(ready.messages[1].content, 'Step 1')
-  assert.deepEqual(ready.messages[1].sourceIds, ['original-sample-1'])
+  assert.equal(ready.messages[1].effectiveTarget.skillId, 'linear-equations-one-variable')
+  assert.equal('sourceIds' in ready.messages[1], false)
+  assert.equal('scopeNotice' in ready.messages[1], false)
 })
 
 test('chat exposes error and retry states without duplicating the user message', () => {

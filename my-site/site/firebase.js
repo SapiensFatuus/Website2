@@ -1,6 +1,8 @@
 import { initializeApp } from 'firebase/app'
 import { getAnalytics, isSupported, logEvent } from 'firebase/analytics'
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check'
+import { getAuth } from 'firebase/auth'
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCxBAijhhqy9V6VFgz6rudUMTecsOj8NxU',
@@ -13,7 +15,15 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
-const appCheckSiteKey = import.meta.env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY
+const auth = getAuth(app)
+const db = getFirestore(app)
+const environment = import.meta.env ?? {}
+const appCheckSiteKey = environment.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY
+const useFirestoreEmulator = environment.VITE_USE_FIRESTORE_EMULATOR === 'true'
+
+if (typeof window !== 'undefined' && useFirestoreEmulator) {
+  connectFirestoreEmulator(db, '127.0.0.1', 8080)
+}
 
 if (typeof window !== 'undefined' && appCheckSiteKey) {
   initializeAppCheck(app, {
@@ -28,7 +38,7 @@ const analyticsPromise =
         .then((supported) => (supported ? getAnalytics(app) : null))
         .catch(() => null)
 
-export { analyticsPromise, app }
+export { analyticsPromise, app, auth, db }
 
 export async function trackEvent(eventName, eventParams = {}) {
   const analytics = await analyticsPromise

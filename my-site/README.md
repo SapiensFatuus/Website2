@@ -2,14 +2,11 @@
 
 This project is now set up to use Firebase as its primary hosting path, with a small Firebase Functions backend for the live visitor tracker.
 
-## SAT Math AI tutor prototype
+## Adaptive AI tutor
 
-Two skills have enabled AI tutors:
+SAT Math and AP Chemistry each have one test tutor. Test overview pages open a clean whole-test conversation, while SAT Math unit and skill links generate a focused opening question and submit it automatically.
 
-- `sat:math:algebra:linear-equations-one-variable`
-- `sat:math:algebra:linear-functions`
-
-Both use small manually curated context packs explicitly labeled as original prototype material. They do not contain copied SAT or commercial test questions.
+The tutor adjusts its internal focus automatically as the student moves between units and skills. Students never manage scope or see grounding metadata. Questions outside the selected test still receive a helpful answer with a brief test-boundary note.
 
 The browser defaults to safe local mock mode. No API key is needed and no request leaves the browser:
 
@@ -18,7 +15,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Open SAT Math, choose **View Topics**, expand **Algebra**, and select **Ask AI** beside **Linear equations in one variable**.
+Open SAT Math or AP Chemistry and choose **Ask the [test] Tutor** for whole-test tutoring. SAT Math also exposes secondary **Teach me this unit** and **Teach me this skill** actions.
 
 ### Configure Vertex AI Gemini and deploy
 
@@ -39,19 +36,13 @@ The tutor uses Vertex AI with the Cloud Function's service account. No Gemini AP
    npm run deploy:hosting
    ```
 
-The exported callable is `satMathTutor` in `us-central1`. Its input is validated canonical taxonomy data, a message of at most 1,200 characters, and at most 10 history messages.
+The exported callable remains `satMathTutor` in `us-central1` for deployment compatibility. Its input accepts a canonical `skill`, `domain`, or `subject` target, a message of at most 1,200 characters, and at most 10 history messages. The backend retains effective-target and classification fields for compatibility, but the chat UI does not expose routing or grounding details.
 
-### Add another tutor skill
+### Add another tutor course or grounding pack
 
-Tutor support is data-driven but intentionally allow-listed. To add a skill:
+Course scope is allow-listed independently in `functions/tutorScopeCatalog.js` and `site/chat/tutorScopes.js`. Add matching canonical course, unit, and skill metadata to both server and client catalogs, then add scope-resolution and URL tests.
 
-1. Add declarative client capability metadata in `site/taxonomy/contentTaxonomy.js` so the shared topic browser and chat route can expose it.
-2. Add a server-only context-pack module under `functions/tutorContextPacks/`. Include the canonical target, label, original-material notice, relevance rules, and uniquely identified materials.
-3. Register the pack in `functions/tutorRegistry.js`. The registry validates complete targets, pack metadata, and globally unique source IDs when the module loads.
-4. Add a separate client-safe fixture to `site/chat/mockTutor.js` for offline mock mode. Do not import production context packs or prompt-building code into the browser.
-5. Add registry, isolation, insufficient-context, history, source-filtering, taxonomy URL, and mock-mode tests.
-
-Adding a context pack should not require editing the callable flow or chat UI. Production prompts and approved source packs must remain inside `functions/`.
+Optional server-only grounding packs live under `functions/tutorContextPacks/` and are registered in `functions/tutorRegistry.js`. They must use original material and globally unique source IDs. Adding a pack enriches answers but does not change tutor availability or require editing the callable flow.
 
 ## Canonical question catalog
 
@@ -114,6 +105,29 @@ Run `npm run catalog:coverage` for deterministic counts by exam, subject, domain
 
 AP Chemistry remains prototype-only content behind `site/questions/legacy/apChemistryAdapter.js`. It is intentionally excluded from the canonical catalog until that subject receives a complete shared taxonomy and migration.
 
+## Skill catalog search
+
+The SAT Math topic browser indexes every skill from the shared taxonomy through `site/catalog/skillSearch.js`. Search never duplicates taxonomy records and does not create per-skill pages.
+
+Skill aliases and tags are declarative entries in `skillSearchMetadata` inside `site/taxonomy/contentTaxonomy.js`. Add normalized, student-friendly alternatives there when introducing or renaming a skill; UI components should not contain search-specific skill checks.
+
+Results are ranked deterministically in this order:
+
+1. Exact skill label.
+2. Exact alias.
+3. Skill-label prefix.
+4. Other skill-label match.
+5. Alias, tag, canonical ID, exam, subject, or domain match.
+6. Domain or skill description match.
+
+Search ignores case, repeated whitespace, accents, and common punctuation. All results retain canonical exam, subject, domain, and skill IDs and use the shared URL helpers.
+
+Practice availability is derived from published canonical questions through `getPublishedQuestionCount`; tutor availability comes from declarative tutor capability metadata. Skills with no published questions show a non-interactive “Practice unavailable” status rather than opening an empty practice setup.
+
+The `q` parameter stores search state, for example `/topics.html?topic=sat-math&q=slope`. Refreshing and sharing that URL restores the search. Selecting a result keeps `q` alongside its canonical domain and skill target, so browser back and forward navigation restore both the broad results and selected skill.
+
+Run `npm test` for search ranking, normalization, canonical URL, immutability, and availability tests. Browser verification should cover URL restoration, back/forward navigation, native disclosure controls, unavailable actions, and desktop/mobile overflow behavior.
+
 ### Try Gemini locally with emulators
 
 For local Vertex AI calls, install the Google Cloud CLI and authenticate Application Default Credentials:
@@ -153,6 +167,117 @@ The app already includes:
 - Firebase Functions for backend API routes under `/api/*`
 - Firebase Analytics for page visits and event tracking
 - Firestore-backed visitor tracking handled by the backend
+
+## Accounts and learning records
+
+Phase 4 adds a client-side Firebase Authentication and Firestore foundation for persistent learning history without making practice depend on login.
+
+### Supported sign-in methods
+
+- Google sign-in through Firebase Authentication popup flow.
+
+### Guest versus signed-in behavior
+
+- Guests can browse SAT Math topics, search skills, open direct skill URLs, and complete practice without signing in.
+- In-progress practice sessions stay in `localStorage` on the current device so a refresh or accidental navigation can be resumed.
+- Guest learning history is temporary. It is not written to permanent Firestore user records.
+- Signed-in users keep the same public browsing and practice flow, and completed practice sessions are saved to Firestore for cross-device history.
+- If Firestore persistence fails, practice results still remain visible and the page offers a retry without destroying the completed session.
+
+### Firestore data model
+
+Learning records are stored under `users/{uid}`:
+
+```text
+users/{uid}
+  profile document
+  attempts/{attemptId}
+  sessions/{sessionId}
+  mastery/{skillId}
+```
+
+`users/{uid}`
+
+- Stores account metadata owned by the authenticated user.
+- Current fields: `schemaVersion`, `uid`, `email`, `displayName`, `photoURL`, `authProviderIds`, `createdAt`, `lastSeenAt`.
+
+`users/{uid}/attempts/{attemptId}`
+
+- Append-friendly per-question records for submitted answers only.
+- Current fields: `schemaVersion`, `uid`, `attemptId`, `sessionId`, `examId`, `subjectId`, `domainId`, `skillId`, `questionId`, `mode`, `source`, `isCorrect`, `answer`, `answeredAt`, `durationSeconds`.
+- Canonical question text is not duplicated into attempt documents.
+
+`users/{uid}/sessions/{sessionId}`
+
+- Completed practice or testing session summaries.
+- Current fields: `schemaVersion`, `uid`, `sessionId`, `examId`, `subjectId`, `domainIds`, `skillIds`, `mode`, `questionCount`, `attemptedCount`, `correctCount`, `accuracyPercent`, `completionState`, `startedAt`, `completedAt`, `timerMinutes`, `filterDomainIds`, `filterSkillIds`.
+
+`users/{uid}/mastery/{skillId}`
+
+- Derived per-skill snapshots that can evolve without rewriting immutable attempt records.
+- Current fields: `schemaVersion`, `uid`, `skillId`, `attemptCount`, `correctCount`, `recentResults`, `recentAccuracyPercent`, `lastPracticedAt`, `updatedAt`, `metricSummary`.
+
+### Schema versions
+
+- `LEARNING_RECORD_SCHEMA_VERSION = 1`
+- Practice-session local storage remains `study-ai-question-session-v1`
+
+### Idempotency
+
+- Each practice session receives a stable client-generated `session.id`.
+- Each attempt document ID is deterministic: `{sessionId}__{questionId}`.
+- Firestore persistence treats the session document as the write marker. If `users/{uid}/sessions/{sessionId}` already exists, the write is treated as an idempotent duplicate and mastery counts are not incremented again.
+- Attempt and completed-session documents can be created and deleted by their owner, but cannot be updated in place. Mastery snapshots remain updateable derived records.
+
+### Initial progress and mastery metric
+
+- `accuracyPercent` on session summaries is the percent correct across answered attempts in that completed session.
+- `recentAccuracyPercent` on mastery snapshots is the percent correct across the latest recorded attempts stored in `recentResults` for that skill.
+- This is an initial progress signal, not a scientifically validated mastery estimate.
+
+### Security assumptions
+
+- Firestore rules allow reads and writes only when `request.auth.uid` matches the `users/{uid}` path owner.
+- Unauthenticated users cannot read or write private learning records.
+- Clients cannot write mismatched `uid`, `sessionId`, `attemptId`, or `skillId` values into protected paths.
+- Non-user collections, including tracker documents, remain unavailable to direct client reads and writes.
+
+### Commands
+
+Run these from `my-site`:
+
+```bash
+npm run catalog:validate
+npm run catalog:coverage
+npm run test:site
+npm run test:functions
+npm run test:rules
+npm run lint
+npm run build
+git diff --check
+```
+
+`npm test` runs the catalog validation, site tests, Functions tests, and Firestore rules tests together.
+
+### Emulator setup
+
+- `npm run test:rules` uses `firebase emulators:exec --only firestore "node --test site/learning/firestore.rules.test.js"`.
+- The Firestore emulator requires a local Java runtime. Set `JAVA_HOME` and add its `bin` directory to `PATH`, or otherwise make `java` available before running the emulator.
+- Optional local Firestore client testing can use `VITE_USE_FIRESTORE_EMULATOR=true`, which connects the browser client to `127.0.0.1:8080`.
+
+### Firebase Console steps
+
+1. In Firebase Authentication, enable Google as a sign-in provider.
+2. In Authentication settings, ensure your local and production domains are authorized if Firebase prompts for them.
+3. In Firestore Database, create the database if it does not already exist.
+4. Deploy updated Firestore rules when you are ready with `npm run deploy:firestore`.
+
+### Known limitations and likely Phase 5 follow-ups
+
+- The current release saves completed practice sessions, not mid-session cross-device sync.
+- Tutor conversation persistence is intentionally deferred; no server-only tutor context is written to Firestore.
+- Mastery uses a simple rolling recent-accuracy metric and should be replaced with a richer progress model in a later phase.
+- Anonymous-auth upgrade flows are not implemented yet, but the data model is compatible with adding them later.
 
 ## Project files
 

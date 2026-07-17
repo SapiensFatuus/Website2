@@ -2,6 +2,243 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function optionalString(value) {
+      return value == null || value is string;
+    }
+
+    function optionalTimestamp(value) {
+      return value == null || value is timestamp;
+    }
+
+    function validStringList(value, maxSize) {
+      return value is list && value.size() <= maxSize;
+    }
+
+    function validProfile(uid) {
+      return request.resource.data.keys().hasOnly([
+        'schemaVersion',
+        'uid',
+        'email',
+        'displayName',
+        'photoURL',
+        'authProviderIds',
+        'createdAt',
+        'lastSeenAt',
+      ])
+      && request.resource.data.keys().hasAll([
+        'schemaVersion',
+        'uid',
+        'authProviderIds',
+        'createdAt',
+        'lastSeenAt',
+      ])
+      && request.resource.data.schemaVersion == 1
+      && request.resource.data.uid == uid
+      && optionalString(request.resource.data.email)
+      && optionalString(request.resource.data.displayName)
+      && optionalString(request.resource.data.photoURL)
+      && validStringList(request.resource.data.authProviderIds, 10)
+      && request.resource.data.createdAt is timestamp
+      && request.resource.data.lastSeenAt is timestamp;
+    }
+
+    function validAttempt(uid, attemptId) {
+      return request.resource.data.keys().hasOnly([
+        'schemaVersion',
+        'uid',
+        'attemptId',
+        'sessionId',
+        'examId',
+        'subjectId',
+        'domainId',
+        'skillId',
+        'questionId',
+        'mode',
+        'source',
+        'isCorrect',
+        'answer',
+        'answeredAt',
+        'durationSeconds',
+      ])
+      && request.resource.data.keys().hasAll([
+        'schemaVersion',
+        'uid',
+        'attemptId',
+        'sessionId',
+        'examId',
+        'subjectId',
+        'domainId',
+        'skillId',
+        'questionId',
+        'mode',
+        'source',
+        'isCorrect',
+        'answeredAt',
+        'durationSeconds',
+      ])
+      && request.resource.data.schemaVersion == 1
+      && request.resource.data.uid == uid
+      && request.resource.data.attemptId == attemptId
+      && request.resource.data.attemptId == request.resource.data.sessionId + '__' + request.resource.data.questionId
+      && request.resource.data.sessionId is string
+      && request.resource.data.examId is string
+      && request.resource.data.subjectId is string
+      && request.resource.data.domainId is string
+      && request.resource.data.skillId is string
+      && request.resource.data.questionId is string
+      && request.resource.data.mode in ['practice', 'testing']
+      && request.resource.data.source == 'practice-session'
+      && request.resource.data.isCorrect is bool
+      && (request.resource.data.answer == null || request.resource.data.answer is string)
+      && request.resource.data.answeredAt is timestamp
+      && request.resource.data.durationSeconds is int
+      && request.resource.data.durationSeconds >= 0;
+    }
+
+    function validSession(uid, sessionId) {
+      return request.resource.data.keys().hasOnly([
+        'schemaVersion',
+        'uid',
+        'sessionId',
+        'examId',
+        'subjectId',
+        'domainIds',
+        'skillIds',
+        'mode',
+        'questionCount',
+        'attemptedCount',
+        'correctCount',
+        'accuracyPercent',
+        'completionState',
+        'startedAt',
+        'completedAt',
+        'timerMinutes',
+        'filterDomainIds',
+        'filterSkillIds',
+      ])
+      && request.resource.data.keys().hasAll([
+        'schemaVersion',
+        'uid',
+        'sessionId',
+        'examId',
+        'subjectId',
+        'domainIds',
+        'skillIds',
+        'mode',
+        'questionCount',
+        'attemptedCount',
+        'correctCount',
+        'accuracyPercent',
+        'completionState',
+        'startedAt',
+        'completedAt',
+        'timerMinutes',
+        'filterDomainIds',
+        'filterSkillIds',
+      ])
+      && request.resource.data.schemaVersion == 1
+      && request.resource.data.uid == uid
+      && request.resource.data.sessionId == sessionId
+      && request.resource.data.examId is string
+      && request.resource.data.subjectId is string
+      && validStringList(request.resource.data.domainIds, 25)
+      && validStringList(request.resource.data.skillIds, 50)
+      && request.resource.data.mode in ['practice', 'testing']
+      && request.resource.data.questionCount is int
+      && request.resource.data.questionCount >= 0
+      && request.resource.data.attemptedCount is int
+      && request.resource.data.attemptedCount >= 0
+      && request.resource.data.correctCount is int
+      && request.resource.data.correctCount >= 0
+      && request.resource.data.correctCount <= request.resource.data.attemptedCount
+      && request.resource.data.attemptedCount <= request.resource.data.questionCount
+      && request.resource.data.accuracyPercent is int
+      && request.resource.data.accuracyPercent >= 0
+      && request.resource.data.accuracyPercent <= 100
+      && request.resource.data.completionState in ['submitted', 'time-expired']
+      && request.resource.data.startedAt is timestamp
+      && request.resource.data.completedAt is timestamp
+      && request.resource.data.completedAt >= request.resource.data.startedAt
+      && (request.resource.data.timerMinutes == null || (request.resource.data.timerMinutes is int && request.resource.data.timerMinutes > 0))
+      && validStringList(request.resource.data.filterDomainIds, 25)
+      && validStringList(request.resource.data.filterSkillIds, 50);
+    }
+
+    function validMastery(uid, skillId) {
+      return request.resource.data.keys().hasOnly([
+        'schemaVersion',
+        'uid',
+        'skillId',
+        'attemptCount',
+        'correctCount',
+        'recentResults',
+        'recentAccuracyPercent',
+        'lastPracticedAt',
+        'updatedAt',
+        'metricSummary',
+      ])
+      && request.resource.data.keys().hasAll([
+        'schemaVersion',
+        'uid',
+        'skillId',
+        'attemptCount',
+        'correctCount',
+        'recentResults',
+        'recentAccuracyPercent',
+        'lastPracticedAt',
+        'updatedAt',
+        'metricSummary',
+      ])
+      && request.resource.data.schemaVersion == 1
+      && request.resource.data.uid == uid
+      && request.resource.data.skillId == skillId
+      && request.resource.data.attemptCount is int
+      && request.resource.data.attemptCount >= 0
+      && request.resource.data.correctCount is int
+      && request.resource.data.correctCount >= 0
+      && request.resource.data.correctCount <= request.resource.data.attemptCount
+      && request.resource.data.recentResults is list
+      && request.resource.data.recentResults.size() <= 10
+      && request.resource.data.recentAccuracyPercent is int
+      && request.resource.data.recentAccuracyPercent >= 0
+      && request.resource.data.recentAccuracyPercent <= 100
+      && request.resource.data.lastPracticedAt is timestamp
+      && request.resource.data.updatedAt is timestamp
+      && request.resource.data.metricSummary is string;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validProfile(uid);
+      allow delete: if isOwner(uid);
+
+      match /attempts/{attemptId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validAttempt(uid, attemptId);
+        allow delete: if isOwner(uid);
+      }
+
+      match /sessions/{sessionId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validSession(uid, sessionId);
+        allow delete: if isOwner(uid);
+      }
+
+      match /mastery/{skillId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validMastery(uid, skillId);
+        allow delete: if isOwner(uid);
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

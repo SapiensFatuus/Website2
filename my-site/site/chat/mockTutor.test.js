@@ -2,48 +2,70 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createMockTutorResponse } from './mockTutor.js'
 
-const baseTarget = { examId: 'sat', subjectId: 'sat-math', domainId: 'algebra' }
+const skillTarget = {
+  scope: 'skill', examId: 'sat', subjectId: 'sat-math', domainId: 'algebra', skillId: 'linear-functions',
+}
 
-test('client-safe mock supports both configured tutor skills', () => {
-  const equation = createMockTutorResponse({
-    target: { ...baseTarget, skillId: 'linear-equations-one-variable' },
-    message: 'How do I solve this equation?',
-    history: [],
-  })
-  const linearFunction = createMockTutorResponse({
-    target: { ...baseTarget, skillId: 'linear-functions' },
-    message: 'How do I find the slope?',
-    history: [],
-  })
-  assert.equal(equation.insufficient, false)
-  assert.deepEqual(equation.sourceIds, ['mock-linear-equations-example'])
-  assert.equal(linearFunction.insufficient, false)
-  assert.deepEqual(linearFunction.sourceIds, ['mock-linear-functions-example'])
+function ask(target, message, history = []) {
+  return createMockTutorResponse({ target, message, history })
+}
+
+test('mock preserves focused skill tutoring with useful guidance', () => {
+  const response = ask(skillTarget, 'How do I find the slope?')
+  assert.equal(response.insufficient, false)
+  assert.equal(response.effectiveTarget.skillId, 'linear-functions')
+  assert.equal('sourceIds' in response, false)
+  assert.match(response.answer, /verify/i)
 })
 
-test('mock rejects unsupported targets and reports unrelated questions as insufficient', () => {
-  assert.throws(() => createMockTutorResponse({
-    target: { ...baseTarget, skillId: 'circles' }, message: 'Help', history: [],
-  }), /not supported/)
-  const response = createMockTutorResponse({
-    target: { ...baseTarget, skillId: 'linear-functions' }, message: 'Explain photosynthesis.', history: [],
-  })
+test('mock automatically adjusts from one SAT Math skill to another', () => {
+  const response = ask(skillTarget, 'How do I find the radius of a circle?')
+  assert.equal(response.classification, 'adjusted-within-subject')
+  assert.equal(response.effectiveTarget.skillId, 'circles')
+  assert.match(response.scopeNotice, /Circles/)
+  assert.match(response.answer, /center/i)
+})
+
+test('generated skill prompts start focused tutoring automatically', () => {
+  const response = ask(skillTarget, 'Teach me linear functions for SAT Math. Start by checking what I already understand, then explain the concept with a test-style example and guide me through practice.')
+  assert.equal(response.effectiveTarget.skillId, 'linear-functions')
+  assert.match(response.answer, /slope|already understand/i)
+})
+
+test('mock supports unit-level and whole-test tutoring', () => {
+  const unit = ask({ scope: 'domain', examId: 'sat', subjectId: 'sat-math', domainId: 'algebra' }, 'Review algebra with me.')
+  assert.equal(unit.insufficient, false)
+  assert.equal(unit.effectiveTarget.subjectId, 'sat-math')
+
+  const wholeTest = ask(skillTarget, 'Build a study plan for the whole test.')
+  assert.equal(wholeTest.effectiveTarget.scope, 'subject')
+  assert.equal(wholeTest.classification, 'broadened')
+  assert.match(wholeTest.answer, /diagnostic/i)
+})
+
+test('mock supports AP Chemistry unit adjustment from whole-test scope', () => {
+  const response = ask({ scope: 'subject', examId: 'ap', subjectId: 'ap-chemistry' }, 'Explain Le Chatelier and equilibrium.')
+  assert.equal(response.effectiveTarget.scope, 'domain')
+  assert.equal(response.effectiveTarget.domainId, 'equilibrium')
+  assert.match(response.answer, /Q < K/)
+})
+
+test('mock answers outside-subject questions and clearly marks the boundary', () => {
+  const response = ask(skillTarget, 'Explain photosynthesis.')
+  assert.equal(response.insufficient, false)
+  assert.equal(response.classification, 'outside-subject')
+  assert.match(response.scopeNotice, /outside SAT Math/)
+  assert.match(response.answer, /outside SAT Math/)
+  assert.match(response.answer, /light energy/i)
+})
+
+test('mock asks a focused follow-up only when the request lacks detail', () => {
+  const response = ask(skillTarget, 'Help')
   assert.equal(response.insufficient, true)
-  assert.deepEqual(response.sourceIds, [])
+  assert.match(response.answer, /concept explanation|specific question/i)
 })
 
-test('mock follow-ups require relevant history from the same skill', () => {
-  const target = { ...baseTarget, skillId: 'linear-functions' }
-  const relevant = createMockTutorResponse({
-    target,
-    message: 'Why is that?',
-    history: [{ role: 'user', content: 'How do I find the slope?' }],
-  })
-  const unrelated = createMockTutorResponse({
-    target,
-    message: 'Why is that?',
-    history: [{ role: 'user', content: 'How do I solve an equation?' }],
-  })
-  assert.equal(relevant.insufficient, false)
-  assert.equal(unrelated.insufficient, true)
+test('mock rejects malformed and unsupported requests', () => {
+  assert.throws(() => ask({ scope: 'subject', examId: 'sat', subjectId: 'sat-reading' }, 'Help'), /not supported/)
+  assert.throws(() => createMockTutorResponse({ target: skillTarget, message: '', history: [] }), /valid message/)
 })

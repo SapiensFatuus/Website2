@@ -6,6 +6,8 @@ import { AboutPage, ContactsPage, HomePage, TopicBrowserPage, TopicPage, Topbar 
 import { findTopicBySlug, topics } from './siteData'
 import { QuestionPage } from './questions/QuestionPage'
 import { getPracticeFilters } from './taxonomy/contentTaxonomy'
+import { sanitizeSkillSearchQuery } from './catalog/skillSearch'
+import { createSubjectTutorUrl } from './chat/tutorScopes'
 
 const ChatPage = lazy(() => import('./chat/ChatPage').then((module) => ({ default: module.ChatPage })))
 
@@ -124,7 +126,7 @@ function App() {
     }
 
     const params = new URLSearchParams(route.search)
-    const topic = findTopicBySlug(params.get('topic'))
+    const topic = findTopicBySlug(params.get('test') || params.get('topic'))
     document.title = topic
       ? `${currentPageClassName === 'page-questions' ? 'Questions · ' : ''}${topic.title} | Study AI Helper`
       : 'Topic Not Found | Study AI Helper'
@@ -170,13 +172,23 @@ function App() {
     }
 
     const params = new URLSearchParams(route.search)
-    return findTopicBySlug(params.get('topic'))
+    return findTopicBySlug(params.get('test') || params.get('topic'))
   }, [currentPageClassName, route.search])
 
   function navigateTo(path) {
     window.history.pushState({}, '', path)
-    applyRoute(getCurrentLocation())
+    const nextRoute = getCurrentLocation()
+    applyRoute(nextRoute)
     window.scrollTo({ top: 0, behavior: 'auto' })
+
+    if (getPageClassName(nextRoute.pathname) === 'page-home') {
+      window.requestAnimationFrame(() => document.getElementById('searchInput')?.focus())
+    }
+  }
+
+  function replaceRoute(path) {
+    window.history.replaceState({}, '', path)
+    applyRoute(getCurrentLocation())
   }
 
   function createNavigationHandler(path) {
@@ -211,6 +223,14 @@ function App() {
   function handleTopicActionClick(event) {
     const method = event.currentTarget.getAttribute('data-method')
 
+    if (method === 'Ask Questions' && selectedTopic) {
+      const tutorUrl = createSubjectTutorUrl(selectedTopic.slug)
+      if (tutorUrl) {
+        navigateTo(tutorUrl)
+        return
+      }
+    }
+
     if (method === 'View Topics') {
       navigateTo(selectedTopic?.slug === 'sat-math' ? '/topics.html?topic=sat-math' : '/index.html')
       return
@@ -222,6 +242,13 @@ function App() {
     }
 
     window.alert(`You selected: ${method}\n\nThis feature is coming soon! For now, this is a placeholder.`)
+  }
+
+  function handleSkillSearchChange(nextQuery) {
+    const params = new URLSearchParams({ topic: 'sat-math' })
+    const safeQuery = sanitizeSkillSearchQuery(nextQuery)
+    if (safeQuery) params.set('q', safeQuery)
+    replaceRoute(`/topics.html?${params.toString()}`)
   }
 
   return (
@@ -253,11 +280,13 @@ function App() {
         />
       ) : null}
       {currentPageClassName === 'page-topic-browser' ? (
+        // Keep this component mounted while q changes so typing does not lose focus.
         <TopicBrowserPage
-          key={route.search}
           topic={selectedTopic}
           domainId={new URLSearchParams(route.search).get('domain')}
           skillId={new URLSearchParams(route.search).get('skill')}
+          searchQuery={new URLSearchParams(route.search).get('q') || ''}
+          onSearchChange={handleSkillSearchChange}
           onNavigate={createNavigationHandler}
         />
       ) : null}
@@ -275,11 +304,12 @@ function App() {
       {currentPageClassName === 'page-chat' ? (
         <Suspense fallback={<main className="chat-empty-page"><p>Loading math tutor…</p></main>}>
           <ChatPage
-            key={route.search}
             examId={new URLSearchParams(route.search).get('exam')}
-            subjectId={new URLSearchParams(route.search).get('topic')}
-            domainId={new URLSearchParams(route.search).get('domain')}
+            subjectId={new URLSearchParams(route.search).get('test') || new URLSearchParams(route.search).get('topic')}
+            scope={new URLSearchParams(route.search).get('scope')}
+            domainId={new URLSearchParams(route.search).get('unit') || new URLSearchParams(route.search).get('domain')}
             skillId={new URLSearchParams(route.search).get('skill')}
+            returnTo={new URLSearchParams(route.search).get('from')}
             onNavigate={navigateTo}
           />
         </Suspense>

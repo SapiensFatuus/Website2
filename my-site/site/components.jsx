@@ -1,8 +1,15 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useAuth } from './auth/AuthContext'
+import { GOOGLE_SIGN_IN_UI_ENABLED } from './auth/authFeatures'
+import { createDomainTutorUrl } from './chat/tutorScopes'
 import {
-  createSkillBrowserUrl,
-  createSkillChatUrl,
-  createSkillPracticeUrl,
+  getSkillCatalogEntry,
+  normalizeSearchText,
+  sanitizeSkillSearchQuery,
+  searchSkills,
+  withSkillSearchQuery,
+} from './catalog/skillSearch'
+import {
   resolveSubjectLocation,
 } from './taxonomy/contentTaxonomy'
 
@@ -230,6 +237,17 @@ export function HelpTooltip({ text, side = 'top', className = '' }) {
 }
 
 export function Topbar({ pageClassName, showCounters, stats, onNavigate }) {
+  const {
+    authError,
+    authStatus,
+    clearAuthError,
+    isAuthenticating,
+    signIn,
+    signOut,
+    user,
+  } = useAuth()
+  const accountLabel = user?.displayName || user?.email || 'Signed in'
+
   return (
     <header className="topbar">
       <div className="brand">
@@ -283,6 +301,37 @@ export function Topbar({ pageClassName, showCounters, stats, onNavigate }) {
           Contacts
         </a>
       </nav>
+      <div className="account-controls" aria-live="polite">
+        {authStatus === 'loading' ? <span className="account-status">Account loading…</span> : null}
+        {authStatus === 'signed-in' ? (
+          <>
+            <div className="account-summary">
+              <strong>{accountLabel}</strong>
+              <span>Your progress can sync across devices.</span>
+            </div>
+            <button type="button" className="account-button secondary" onClick={signOut}>
+              Sign out
+            </button>
+          </>
+        ) : null}
+        {GOOGLE_SIGN_IN_UI_ENABLED && authStatus === 'signed-out' ? (
+          <>
+            <div className="account-summary">
+              <strong>Guest mode</strong>
+              <span>Practice works now. Sign in to keep your history.</span>
+            </div>
+            <button type="button" className="account-button" disabled={isAuthenticating} onClick={signIn}>
+              {isAuthenticating ? 'Signing in…' : 'Sign in with Google'}
+            </button>
+          </>
+        ) : null}
+        {authError ? (
+          <div className="account-error" role="alert">
+            <span>{authError}</span>
+            <button type="button" onClick={clearAuthError} aria-label="Dismiss account message">Dismiss</button>
+          </div>
+        ) : null}
+      </div>
     </header>
   )
 }
@@ -299,13 +348,13 @@ export function HomePage({
   return (
     <main className="page page-home-main">
       <section className="search-hero">
-        <h1>What do you want to study?</h1>
+        <h1>Which test do you want to study?</h1>
         <input
           type="text"
           id="searchInput"
           className="search-input"
-          placeholder="Search topics (e.g., SAT: Math, AP Chemistry)..."
-          aria-label="Search study topics"
+          placeholder="Search tests (e.g., SAT Math, AP Chemistry)..."
+          aria-label="Search tests"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           onKeyDown={onSearchKeyDown}
@@ -319,7 +368,7 @@ export function HomePage({
           style={{ display: showDropdown ? 'block' : 'none' }}
         >
           {results.length === 0 ? (
-            <div className="search-no-results">No topics found</div>
+            <div className="search-no-results">No tests found</div>
           ) : (
             results.map((topic) => (
               <div
@@ -352,7 +401,7 @@ const fallbackSections = [
 const fallbackActions = [
   {
     label: 'Ask Questions',
-    helpText: 'Ask for explanations, step-by-step help, or quick clarification on this topic.',
+    helpText: 'Ask the test tutor for explanations, step-by-step help, strategy, or a study plan.',
   },
   {
     label: 'Practice Questions',
@@ -360,7 +409,7 @@ const fallbackActions = [
   },
   {
     label: 'View Topics',
-    helpText: 'Go back to the full topic list and pick something else to study.',
+    helpText: 'Browse the test’s units and skills when you want more focused help.',
   },
 ]
 
@@ -390,7 +439,7 @@ export function TopicPage({ topic, onActionClick, onNavigate }) {
     <main className="page">
       <section className="topic-hero">
         <div className="topic-hero-copy">
-          <h1 id="topicTitle">{topic ? topic.title : 'Topic not found'}</h1>
+          <h1 id="topicTitle">{topic ? topic.title : 'Test not found'}</h1>
         </div>
 
         <div className="topic-overview-wrap">
@@ -427,14 +476,14 @@ export function TopicPage({ topic, onActionClick, onNavigate }) {
       <section className="topic-summary">
         <div className="summary-card">
           <p id="topicSummary">
-            {topic ? topic.summary : 'The topic you selected does not exist yet.'}
+            {topic ? topic.summary : 'The test you selected does not exist yet.'}
           </p>
         </div>
       </section>
 
       <section className="topic-actions" aria-label="Learning options">
         <div className="topic-actions-intro">
-          Choose the best way to learn this topic.
+          Choose how you want to prepare for this test.
         </div>
 
         {actions.map((action) => (
@@ -448,7 +497,9 @@ export function TopicPage({ topic, onActionClick, onNavigate }) {
               type="button"
               onClick={onActionClick}
             >
-              {action.label}
+              {action.label === 'Ask Questions' && ['sat-math', 'ap-chemistry'].includes(topic?.slug)
+                ? `Ask the ${topic.slug === 'sat-math' ? 'SAT Math' : 'AP Chemistry'} Tutor`
+                : action.label === 'View Topics' ? 'View units and skills' : action.label}
             </button>
           </div>
         ))}
@@ -463,13 +514,79 @@ export function TopicPage({ topic, onActionClick, onNavigate }) {
   )
 }
 
-export function TopicBrowserPage({ topic, domainId, skillId, onNavigate }) {
+function SkillCatalogCard({ entry, isSelected, selectedSkillRef, searchQuery, onNavigate }) {
+  const browserUrl = withSkillSearchQuery(entry.browserUrl, searchQuery)
+  return (
+    <article
+      className={`skill-card${isSelected ? ' selected' : ''}`}
+      id={`skill-${entry.skillId}`}
+      ref={isSelected ? selectedSkillRef : null}
+    >
+      <div className="skill-copy">
+        <a className="skill-title" href={browserUrl} onClick={onNavigate(browserUrl)}>
+          {entry.domainOrder}.{entry.skillOrder} {entry.skillLabel}
+        </a>
+        <div className="skill-availability" aria-label="Content availability">
+          <span>{entry.practiceQuestionCount} {entry.practiceQuestionCount === 1 ? 'question' : 'questions'}</span>
+          <span>{entry.tutorAvailable ? 'AI tutor available' : 'AI tutor not yet available'}</span>
+        </div>
+        <details className="skill-description">
+          <summary>Description</summary>
+          <p>{entry.skillDescription}</p>
+        </details>
+      </div>
+      <div className="skill-actions">
+        {entry.practiceAvailable ? (
+          <a className="skill-practice-button" href={entry.practiceUrl} onClick={onNavigate(entry.practiceUrl)}>
+            Practice this skill
+          </a>
+        ) : (
+          <span className="skill-action-unavailable">
+            Practice unavailable <small>No questions yet</small>
+          </span>
+        )}
+        {entry.tutorAvailable ? (
+          <a className="skill-ai-button enabled" href={entry.tutorUrl} onClick={onNavigate(entry.tutorUrl)}>
+            Teach me this skill
+          </a>
+        ) : (
+          <span className="skill-action-unavailable">
+            Skill tutor <small>Coming soon</small>
+          </span>
+        )}
+      </div>
+    </article>
+  )
+}
+
+export function TopicBrowserPage({ topic, domainId, skillId, searchQuery = '', onSearchChange, onNavigate }) {
   const target = resolveSubjectLocation(topic?.slug, { domainId, skillId })
   const [expandedDomains, setExpandedDomains] = useState(() => new Set(
     target.domain ? [target.domain.id] : [],
   ))
   const selectedSkillRef = useRef(null)
+  const searchInputRef = useRef(null)
   const selectedSkillId = target.skill?.id
+  const safeSearchQuery = sanitizeSkillSearchQuery(searchQuery)
+  const normalizedSearchQuery = normalizeSearchText(safeSearchQuery)
+  const isSearchActive = Boolean(normalizedSearchQuery)
+  const hasInvalidSearchText = Boolean(safeSearchQuery.trim()) && !isSearchActive
+  const searchResults = useMemo(
+    () => (isSearchActive ? searchSkills(safeSearchQuery, { subjectId: topic?.slug }) : []),
+    [isSearchActive, safeSearchQuery, topic?.slug],
+  )
+  const groupedSearchResults = useMemo(() => {
+    const groups = []
+    searchResults.forEach((entry) => {
+      let group = groups.find((item) => item.domainId === entry.domainId)
+      if (!group) {
+        group = { domainId: entry.domainId, domainLabel: entry.domainLabel, results: [] }
+        groups.push(group)
+      }
+      group.results.push(entry)
+    })
+    return groups
+  }, [searchResults])
 
   useEffect(() => {
     if (!selectedSkillId) return
@@ -479,8 +596,8 @@ export function TopicBrowserPage({ topic, domainId, skillId, onNavigate }) {
   if (!topic || topic.slug !== 'sat-math' || target.status === 'invalid-subject') {
     return (
       <main className="page topic-browser-empty">
-        <h1>Topic browser not found</h1>
-        <p>This subject does not have a topic browser yet.</p>
+        <h1>Unit browser not found</h1>
+        <p>This test does not have a unit browser yet.</p>
         <a href="/index.html" onClick={onNavigate('/index.html')}>Return to search</a>
       </main>
     )
@@ -491,9 +608,9 @@ export function TopicBrowserPage({ topic, domainId, skillId, onNavigate }) {
       <main className="page topic-browser-empty">
         <p className="topic-browser-eyebrow">{topic.title}</p>
         <h1>Skill not found</h1>
-        <p>That domain or skill is not part of the current SAT Math taxonomy.</p>
+        <p>That unit or skill is not part of SAT Math.</p>
         <a href="/topics.html?topic=sat-math" onClick={onNavigate('/topics.html?topic=sat-math')}>
-          Browse all SAT Math topics
+          Browse all SAT Math units
         </a>
       </main>
     )
@@ -508,17 +625,80 @@ export function TopicBrowserPage({ topic, domainId, skillId, onNavigate }) {
     })
   }
 
+  function clearSearch() {
+    onSearchChange('')
+    window.requestAnimationFrame(() => searchInputRef.current?.focus())
+  }
+
   return (
     <main className="page topic-browser-page">
       <header className="topic-browser-header">
         <p className="topic-browser-eyebrow">{topic.title}</p>
-        <h1>Topics and skills</h1>
-        <p>Choose a domain, then pick a skill to practice. Only one domain needs to be open at a time.</p>
+        <h1>SAT Math units and skills</h1>
+        <p>Start with the full test tutor, or browse units and skills when you need focused help.</p>
       </header>
 
-      <div className="domain-list">
+      <section className="skill-search-panel" aria-labelledby="skill-search-heading">
+        <div className="skill-search-heading">
+          <div>
+            <h2 id="skill-search-heading">Find a skill</h2>
+            <p>Search skill names, descriptions, aliases, tags, or units.</p>
+          </div>
+          {safeSearchQuery ? <button type="button" className="skill-search-clear" onClick={clearSearch}>Clear search</button> : null}
+        </div>
+        <label htmlFor="skill-search-input">Search SAT Math skills</label>
+        <input
+          id="skill-search-input"
+          ref={searchInputRef}
+          type="search"
+          value={safeSearchQuery}
+          maxLength="100"
+          placeholder="Try slope, triangles, or solve for x"
+          autoComplete="off"
+          onChange={(event) => onSearchChange(sanitizeSkillSearchQuery(event.target.value))}
+        />
+        <p className="skill-search-status" role="status" aria-live="polite">
+          {isSearchActive
+            ? `${searchResults.length} ${searchResults.length === 1 ? 'skill' : 'skills'} found for “${safeSearchQuery.trim()}”.`
+            : hasInvalidSearchText
+              ? 'Enter at least one letter or number to search.'
+              : 'Enter a search, or browse the four units below.'}
+        </p>
+      </section>
+
+      {isSearchActive ? (
+        <div className="skill-search-results" aria-label="Skill search results">
+          {groupedSearchResults.length ? groupedSearchResults.map((group) => (
+            <section className="search-domain-group domain-card" key={group.domainId}>
+              <h2>
+                <span>{group.domainLabel}</span>
+                <small>{group.results.length} {group.results.length === 1 ? 'match' : 'matches'}</small>
+              </h2>
+              <div className="skill-list">
+                {group.results.map((entry) => (
+                  <SkillCatalogCard
+                    key={entry.skillId}
+                    entry={entry}
+                    isSelected={selectedSkillId === entry.skillId}
+                    selectedSkillRef={selectedSkillRef}
+                    searchQuery={safeSearchQuery}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </div>
+            </section>
+          )) : (
+            <div className="skill-search-empty">
+              <h2>No matching skills</h2>
+              <p>Try a broader term, a unit such as “geometry,” or an alias such as “solve for x.”</p>
+              <button type="button" onClick={clearSearch}>Clear search and browse units</button>
+            </div>
+          )}
+        </div>
+      ) : <div className="domain-list">
         {target.subject.domains.map((domain) => {
-          const isExpanded = expandedDomains.has(domain.id)
+          const isExpanded = expandedDomains.has(domain.id) || target.domain?.id === domain.id
+          const domainTutorUrl = createDomainTutorUrl(topic.slug, domain.id)
           return (
             <section className="domain-card" key={domain.id}>
               <button
@@ -537,53 +717,26 @@ export function TopicBrowserPage({ topic, domainId, skillId, onNavigate }) {
                 <span className="domain-chevron" aria-hidden="true">{isExpanded ? '−' : '+'}</span>
               </button>
 
+              {domainTutorUrl ? (
+                <div className="domain-ai-row">
+                  <a href={domainTutorUrl} onClick={onNavigate(domainTutorUrl)}>Teach me this unit</a>
+                </div>
+              ) : null}
+
               {isExpanded ? (
                 <div className="skill-list" id={`domain-skills-${domain.id}`}>
                   {domain.skills.map((skill) => {
                     const isSelected = target.skill?.id === skill.id
+                    const entry = getSkillCatalogEntry(topic.slug, skill.id)
                     return (
-                      <article
-                        className={`skill-card${isSelected ? ' selected' : ''}`}
-                        id={`skill-${skill.id}`}
+                      <SkillCatalogCard
                         key={skill.id}
-                        ref={isSelected ? selectedSkillRef : null}
-                      >
-                        <div className="skill-copy">
-                          <a
-                            className="skill-title"
-                            href={createSkillBrowserUrl(topic.slug, skill.id)}
-                            onClick={onNavigate(createSkillBrowserUrl(topic.slug, skill.id))}
-                          >
-                            {domain.order}.{skill.order} {skill.label}
-                          </a>
-                          <details className="skill-description">
-                            <summary>Description</summary>
-                            <p>{skill.description}</p>
-                          </details>
-                        </div>
-                        <div className="skill-actions">
-                          <a
-                            className="skill-practice-button"
-                            href={createSkillPracticeUrl(topic.slug, skill.id)}
-                            onClick={onNavigate(createSkillPracticeUrl(topic.slug, skill.id))}
-                          >
-                            Practice this skill
-                          </a>
-                          {skill.tutor ? (
-                            <a
-                              className="skill-ai-button enabled"
-                              href={createSkillChatUrl(topic.slug, skill.id)}
-                              onClick={onNavigate(createSkillChatUrl(topic.slug, skill.id))}
-                            >
-                              Ask AI <span>Prototype</span>
-                            </a>
-                          ) : (
-                            <button type="button" className="skill-ai-button" disabled>
-                              Ask AI <span>Coming soon</span>
-                            </button>
-                          )}
-                        </div>
-                      </article>
+                        entry={entry}
+                        isSelected={isSelected}
+                        selectedSkillRef={selectedSkillRef}
+                        searchQuery=""
+                        onNavigate={onNavigate}
+                      />
                     )
                   })}
                 </div>
@@ -591,7 +744,7 @@ export function TopicBrowserPage({ topic, domainId, skillId, onNavigate }) {
             </section>
           )
         })}
-      </div>
+      </div>}
 
       <div className="topic-back-wrap">
         <a href={`/topic.html?topic=${topic.slug}`} onClick={onNavigate(`/topic.html?topic=${topic.slug}`)}>

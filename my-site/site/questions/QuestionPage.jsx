@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { GOOGLE_SIGN_IN_UI_ENABLED } from '../auth/authFeatures'
+import { canPersistLearningRecords, getProgressPersistenceLabel } from '../auth/authState'
+import { createPersistenceFingerprint } from '../learning/learningIds.js'
+import { persistLearningRecords } from '../learning/learningFirestore.js'
 import {
   getAvailableFilterGroups,
   getDefaultFilterSelections,
@@ -283,7 +288,19 @@ function SetupModal({ topic, initialFilters, savedSession, onResume, onCancel, o
   )
 }
 
-function ResultsView({ session, questions, topic, onNewSession, onRetry, onExit }) {
+function ResultsView({
+  authStatus,
+  isAuthenticating,
+  onRetrySave,
+  onSignIn,
+  questions,
+  saveState,
+  session,
+  topic,
+  onNewSession,
+  onRetry,
+  onExit,
+}) {
   const [sortKey, setSortKey] = useState('order')
   const [sortDirection, setSortDirection] = useState('asc')
   const grade = gradeSession(session, questions)
@@ -302,6 +319,19 @@ function ResultsView({ session, questions, topic, onNewSession, onRetry, onExit 
         <p className="question-eyebrow">{topic.title} · {session.config.mode === 'testing' ? 'Test' : 'Practice'} complete</p>
         <h1 className={`score-${scoreBand}`}>{grade.percent}%</h1>
         <p>{grade.total ? `${grade.correct} correct out of ${grade.total}` : 'No graded answers'}</p>
+        <div className={`learning-save-banner ${saveState.status}`}>
+          <p>{saveState.message}</p>
+          {GOOGLE_SIGN_IN_UI_ENABLED && authStatus === 'signed-out' ? (
+            <button type="button" className="question-secondary-button" disabled={isAuthenticating} onClick={onSignIn}>
+              {isAuthenticating ? 'Signing in…' : 'Sign in to save progress'}
+            </button>
+          ) : null}
+          {saveState.status === 'error' ? (
+            <button type="button" className="question-secondary-button" onClick={onRetrySave}>
+              Retry save
+            </button>
+          ) : null}
+        </div>
         <div className="result-stat-grid">
           <div><strong>{grade.correct}</strong><span>Correct</span></div>
           <div><strong>{grade.incorrect}</strong><span>Incorrect</span></div>
@@ -456,12 +486,19 @@ function FlaggedReviewModal({ flaggedCount, onReview, onSubmit, onCancel }) {
 }
 
 export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
+  const { authStatus, isAuthenticating, signIn, user } = useAuth()
   const [savedSession, setSavedSession] = useState(() => topic ? readSavedSession(topic.slug) : null)
   const [session, setSession] = useState(null)
   const [setupOpen, setSetupOpen] = useState(true)
   const [now, setNow] = useState(0)
   const [navigatorExpanded, setNavigatorExpanded] = useState(true)
   const [flagReviewOpen, setFlagReviewOpen] = useState(false)
+  const [saveState, setSaveState] = useState({
+    status: 'idle',
+    message: '',
+  })
+  const [saveAttemptNonce, setSaveAttemptNonce] = useState(0)
+  const persistedFingerprintsRef = useRef(new Set())
 
   const questions = useMemo(
     () => session ? getQuestionsByIds(session.questionIds) : [],
@@ -471,6 +508,39 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
   const selectedOptionId = currentQuestion ? session.answers[currentQuestion.id] : null
   const isCurrentSubmitted = currentQuestion ? Boolean(session.submitted[currentQuestion.id]) : false
   const isPractice = session?.config.mode === 'practice'
+  const persistenceMessage = GOOGLE_SIGN_IN_UI_ENABLED || user
+    ? getProgressPersistenceLabel(user, session)
+    : 'Guest progress is stored only on this device.'
+  const displaySaveState = useMemo(() => {
+    if (!session || session.status !== 'complete') {
+      return { status: 'idle', message: persistenceMessage }
+    }
+
+    if (authStatus === 'signed-out') {
+      return {
+        status: 'guest',
+        message: GOOGLE_SIGN_IN_UI_ENABLED
+          ? 'This completed session is not saved to an account. Sign in to keep learning history across devices.'
+          : 'This completed session is stored only on this device.',
+      }
+    }
+
+    if (saveState.status === 'saving' || saveState.status === 'saved' || saveState.status === 'error') {
+      return saveState
+    }
+
+    if (authStatus === 'loading') {
+      return {
+        status: 'idle',
+        message: 'Checking your account before saving this session…',
+      }
+    }
+
+    return {
+      status: 'idle',
+      message: 'Your completed session is ready to save.',
+    }
+  }, [authStatus, persistenceMessage, saveState, session])
 
   useEffect(() => {
     if (!session || session.status !== 'active') return undefined
@@ -518,6 +588,53 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
     }
   }, [session?.status])
 
+  useEffect(() => {
+    if (!session || session.status !== 'complete' || !canPersistLearningRecords(user, session)) return
+
+    const fingerprint = createPersistenceFingerprint(user.uid, session.id)
+    let cancelled = false
+
+    void (async () => {
+      if (persistedFingerprintsRef.current.has(fingerprint)) {
+        if (cancelled) return
+        setSaveState({
+          status: 'saved',
+          message: 'Saved to your account. Future visits on other devices can use this history.',
+        })
+        return
+      }
+
+      setSaveState({
+        status: 'saving',
+        message: 'Saving this completed session to your account…',
+      })
+
+      try {
+        const result = await persistLearningRecords({ user, session, questions })
+        if (cancelled) return
+
+        persistedFingerprintsRef.current.add(fingerprint)
+        setSaveState({
+          status: 'saved',
+          message: result.status === 'duplicate'
+            ? 'This session was already saved to your account.'
+            : 'Saved to your account. Future visits on other devices can use this history.',
+        })
+      } catch {
+        if (cancelled) return
+
+        setSaveState({
+          status: 'error',
+          message: 'We could not save this session right now. Your results still remain available here.',
+        })
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [authStatus, questions, saveAttemptNonce, session, user])
+
   if (!topic) {
     return (
       <main className="question-empty-page">
@@ -541,6 +658,7 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
     setSavedSession(null)
     setSetupOpen(false)
     setNavigatorExpanded(nextSession.questionIds.length <= 20)
+    setSaveState({ status: 'idle', message: '' })
     window.scrollTo({ top: 0, behavior: 'auto' })
   }
 
@@ -553,6 +671,7 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
     setSavedSession(null)
     setSetupOpen(false)
     setNavigatorExpanded(normalized.questionIds.length <= 20)
+    setSaveState({ status: 'idle', message: '' })
     window.scrollTo({ top: 0, behavior: 'auto' })
   }
 
@@ -566,6 +685,7 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
     setSession(nextSession)
     setSetupOpen(false)
     setNavigatorExpanded(nextSession.questionIds.length <= 20)
+    setSaveState({ status: 'idle', message: '' })
     window.scrollTo({ top: 0, behavior: 'auto' })
   }
 
@@ -678,12 +798,27 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
     setSavedSession(null)
     setSetupOpen(true)
     setFlagReviewOpen(false)
+    setSaveState({ status: 'idle', message: '' })
     window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
+  function retrySave() {
+    if (!session?.id || !user?.uid) return
+    persistedFingerprintsRef.current.delete(createPersistenceFingerprint(user.uid, session.id))
+    setSaveAttemptNonce((current) => current + 1)
   }
 
   if (setupOpen) {
     return (
       <div className="question-setup-page">
+        <div className="practice-progress-note" role="note">
+          <p>{GOOGLE_SIGN_IN_UI_ENABLED || user ? getProgressPersistenceLabel(user, null) : 'Guest progress is stored only on this device.'}</p>
+          {GOOGLE_SIGN_IN_UI_ENABLED && authStatus === 'signed-out' ? (
+            <button type="button" className="question-secondary-button" disabled={isAuthenticating} onClick={signIn}>
+              {isAuthenticating ? 'Signing in…' : 'Sign in with Google'}
+            </button>
+          ) : null}
+        </div>
         <SetupModal
           topic={topic}
           initialFilters={initialFilters}
@@ -702,9 +837,14 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
         session={session}
         questions={questions}
         topic={topic}
+        authStatus={authStatus}
+        isAuthenticating={isAuthenticating}
+        saveState={displaySaveState}
         onNewSession={resetToSetup}
         onRetry={retrySession}
         onExit={() => navigateToTopic(true)}
+        onRetrySave={retrySave}
+        onSignIn={signIn}
       />
     )
   }
@@ -746,6 +886,14 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
 
   return (
     <div className="question-session-page">
+      <section className={`practice-progress-note inline ${authStatus}`}>
+        <p>{persistenceMessage}</p>
+        {GOOGLE_SIGN_IN_UI_ENABLED && authStatus === 'signed-out' ? (
+          <button type="button" className="question-secondary-button" disabled={isAuthenticating} onClick={signIn}>
+            {isAuthenticating ? 'Signing in…' : 'Sign in with Google'}
+          </button>
+        ) : null}
+      </section>
       <header className="question-session-header">
         <button type="button" className="question-text-button question-exit" onClick={() => navigateToTopic()}>← Exit</button>
         <div className="session-heading">

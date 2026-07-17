@@ -13,6 +13,29 @@ export const tutorCapabilities = Object.freeze({
   }),
 })
 
+export const skillSearchMetadata = Object.freeze({
+  'linear-equations-one-variable': Object.freeze({ aliases: ['one-variable linear equations', 'solve for x'], tags: ['algebra', 'equations', 'one-variable'] }),
+  'linear-functions': Object.freeze({ aliases: ['slope-intercept form', 'linear relationships'], tags: ['algebra', 'functions', 'slope', 'intercept'] }),
+  'linear-equations-two-variables': Object.freeze({ aliases: ['equations of lines'], tags: ['algebra', 'equations', 'coordinate-plane'] }),
+  'systems-linear-equations': Object.freeze({ aliases: ['simultaneous equations'], tags: ['algebra', 'systems', 'intersection'] }),
+  'linear-inequalities': Object.freeze({ aliases: ['inequality graphs'], tags: ['algebra', 'inequalities', 'graphing'] }),
+  'equivalent-expressions': Object.freeze({ aliases: ['rewriting expressions'], tags: ['advanced-math', 'factoring', 'exponents'] }),
+  'nonlinear-equations-one-variable': Object.freeze({ aliases: ['quadratic and radical equations'], tags: ['advanced-math', 'quadratics', 'radicals'] }),
+  'systems-linear-nonlinear': Object.freeze({ aliases: ['linear nonlinear systems'], tags: ['advanced-math', 'systems', 'intersection'] }),
+  'nonlinear-functions': Object.freeze({ aliases: ['quadratic and exponential functions'], tags: ['advanced-math', 'quadratics', 'exponentials'] }),
+  'ratios-rates-proportions-units': Object.freeze({ aliases: ['unit rates', 'proportional relationships'], tags: ['data-analysis', 'ratios', 'rates', 'units'] }),
+  percentages: Object.freeze({ aliases: ['percent change'], tags: ['data-analysis', 'percents', 'growth', 'discounts'] }),
+  'one-variable-data': Object.freeze({ aliases: ['single-variable statistics'], tags: ['data-analysis', 'statistics', 'mean', 'median'] }),
+  'two-variable-data': Object.freeze({ aliases: ['bivariate data'], tags: ['data-analysis', 'scatterplots', 'correlation'] }),
+  'probability-conditional-probability': Object.freeze({ aliases: ['conditional probability'], tags: ['data-analysis', 'probability', 'outcomes'] }),
+  'inference-sample-statistics': Object.freeze({ aliases: ['statistical inference'], tags: ['data-analysis', 'samples', 'populations'] }),
+  'evaluating-statistical-claims': Object.freeze({ aliases: ['study design'], tags: ['data-analysis', 'surveys', 'experiments'] }),
+  'area-volume': Object.freeze({ aliases: ['area and volume'], tags: ['geometry', 'measurement', 'shapes'] }),
+  'lines-angles-triangles': Object.freeze({ aliases: ['angle and triangle rules'], tags: ['geometry', 'angles', 'triangles'] }),
+  'right-triangles-trigonometry': Object.freeze({ aliases: ['right triangle trig', 'soh cah toa'], tags: ['geometry', 'trigonometry', 'pythagorean-theorem'] }),
+  circles: Object.freeze({ aliases: ['circle equations'], tags: ['geometry', 'arcs', 'radius'] }),
+})
+
 export const questionTypes = [
   { id: 'multiple-choice', label: 'Multiple Choice', renderer: 'multiple-choice' },
   { id: 'student-produced-response', label: 'Student-Produced Response', renderer: 'grid-in' },
@@ -74,7 +97,12 @@ const satMathDomains = [
   ...domain,
   skills: domain.skills.map(([id, label, description], index) => ({
     id, label, description, order: index + 1, domainId: domain.id,
-    tutor: tutorCapabilities[id] || null,
+    tutor: tutorCapabilities[id] || Object.freeze({
+      provider: 'sat-math-tutor',
+      promptTitle: `Ask about ${label.toLowerCase()}`,
+      suggestedQuestion: `Can you explain ${label.toLowerCase()} with an example?`,
+    }),
+    search: skillSearchMetadata[id] || Object.freeze({ aliases: [], tags: [] }),
   })),
 }))
 
@@ -138,7 +166,7 @@ export function createSkillChatUrl(subjectId, skillId) {
   const subject = getSubject(subjectId)
   const skill = getSkill(subjectId, skillId)
   if (!subject || !skill?.tutor) return null
-  return `/chat.html?exam=${encodeURIComponent(subject.examId)}&topic=${encodeURIComponent(subjectId)}&domain=${encodeURIComponent(skill.domainId)}&skill=${encodeURIComponent(skill.id)}`
+  return `/chat.html?exam=${encodeURIComponent(subject.examId)}&test=${encodeURIComponent(subjectId)}&unit=${encodeURIComponent(skill.domainId)}&skill=${encodeURIComponent(skill.id)}`
 }
 
 export function getPracticeFilters(subjectId, { domainId = null, skillId = null } = {}) {

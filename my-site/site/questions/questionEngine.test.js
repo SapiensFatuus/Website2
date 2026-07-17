@@ -46,6 +46,7 @@ test('session creation caps count, preserves a stable set, and sets a deadline',
   }, getQuestions({ topic: 'sat-math', type: 'multiple-choice' }), () => 0.5, 1_000)
 
   assert.equal(session.questionIds.length, 9)
+  assert.ok(session.id)
   assert.equal(new Set(session.questionIds).size, 9)
   assert.equal(session.deadline, 601_000)
   assert.equal(session.status, 'active')
@@ -90,6 +91,7 @@ test('older sessions gain stable option orders and timing fields on restore', ()
   const normalized = normalizeSession(oldSession, [question], () => 0, 500)
 
   assert.equal(normalized.version, 3)
+  assert.ok(normalized.id)
   assert.equal(normalized.optionOrders[question.id].length, 4)
   assert.deepEqual(normalized.timeSpentMs, {})
   assert.deepEqual(normalized.skipped, {})

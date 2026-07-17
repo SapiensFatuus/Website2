@@ -20,8 +20,9 @@ export function chatReducer(state, action) {
       messages: [...state.messages, {
         role: 'assistant',
         content: action.response.answer,
-        sourceIds: action.response.sourceIds,
         insufficient: action.response.insufficient,
+        effectiveTarget: action.response.effectiveTarget,
+        classification: action.response.classification,
         mode: action.response.mode,
       }],
       status: 'ready',

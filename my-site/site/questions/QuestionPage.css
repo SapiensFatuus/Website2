@@ -10,6 +10,61 @@
   background: radial-gradient(circle at top, #f9f9f9 0%, #dedede 72%);
 }
 
+.practice-progress-note {
+  width: min(760px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 18px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.practice-progress-note.inline {
+  width: min(900px, calc(100% - 32px));
+  padding: 14px 0 0;
+}
+
+.practice-progress-note p {
+  margin: 0;
+  color: #3f3f3f;
+  line-height: 1.5;
+}
+
+.learning-save-banner {
+  margin: 0 auto 18px;
+  padding: 14px 16px;
+  border-left: 4px solid #7a7a7a;
+  background: #f2f2f2;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+
+.learning-save-banner p {
+  margin: 0;
+}
+
+.learning-save-banner.saving {
+  border-left-color: #263b5e;
+  background: #e7eef7;
+}
+
+.learning-save-banner.saved {
+  border-left-color: #18743a;
+  background: #e4f3e8;
+}
+
+.learning-save-banner.error {
+  border-left-color: #b3261e;
+  background: #f8e5e3;
+}
+
+.learning-save-banner.guest {
+  border-left-color: #8a6a00;
+  background: #fff6dc;
+}
+
 .question-modal-backdrop {
   min-height: 100vh;
   padding: 32px 16px;
@@ -792,6 +847,13 @@ button:disabled {
 }
 
 @media (max-width: 600px) {
+  .practice-progress-note,
+  .practice-progress-note.inline {
+    width: calc(100% - 20px);
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .question-modal-backdrop {
     padding: 0;
     align-items: stretch;

@@ -1,3 +1,5 @@
+import { createStableSessionId } from '../learning/learningIds.js'
+
 export const SESSION_VERSION = 3
 
 export function shuffle(items, random = Math.random) {
@@ -23,6 +25,7 @@ export function createSession(config, matchingQuestions, random = Math.random, n
   ]))
 
   return {
+    id: createStableSessionId(),
     version: SESSION_VERSION,
     status: 'active',
     config,
@@ -58,6 +61,7 @@ export function normalizeSession(session, questions, random = Math.random, now =
 
   return {
     ...session,
+    id: session.id || createStableSessionId(),
     version: SESSION_VERSION,
     config: {
       ...session.config,

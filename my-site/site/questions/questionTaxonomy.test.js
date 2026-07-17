@@ -176,19 +176,16 @@ test('skill browser URLs use stable taxonomy IDs and resolve direct targets', ()
   assert.equal(target.skill.label, 'Linear functions')
   assert.equal(
     createSkillChatUrl('sat-math', 'linear-equations-one-variable'),
-    '/chat.html?exam=sat&topic=sat-math&domain=algebra&skill=linear-equations-one-variable',
+    '/chat.html?exam=sat&test=sat-math&unit=algebra&skill=linear-equations-one-variable',
   )
   assert.equal(
     createSkillChatUrl('sat-math', 'linear-functions'),
-    '/chat.html?exam=sat&topic=sat-math&domain=algebra&skill=linear-functions',
+    '/chat.html?exam=sat&test=sat-math&unit=algebra&skill=linear-functions',
   )
   assert.equal(getSkill('sat-math', 'linear-equations-one-variable').tutor.provider, 'sat-math-tutor')
   assert.equal(getSkill('sat-math', 'linear-functions').tutor.provider, 'sat-math-tutor')
-  assert.equal(getSkill('sat-math', 'circles').tutor, null)
-  assert.deepEqual(
-    getSubject('sat-math').domains.flatMap((domain) => domain.skills).filter((skill) => skill.tutor).map((skill) => skill.id),
-    ['linear-equations-one-variable', 'linear-functions'],
-  )
+  assert.equal(getSkill('sat-math', 'circles').tutor.provider, 'sat-math-tutor')
+  assert.equal(getSubject('sat-math').domains.flatMap((domain) => domain.skills).every((skill) => skill.tutor), true)
 })
 
 test('direct practice targets preselect domain and skill filters', () => {

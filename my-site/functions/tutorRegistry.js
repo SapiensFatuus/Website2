@@ -45,6 +45,15 @@ export function getTutorContextPack(target) {
   return registryByKey.get(createTutorTargetKey(target)) || null
 }
 
+export function getTutorContextPacksForTarget(target = {}) {
+  return contextPacks.filter((pack) => (
+    pack.target.examId === target.examId
+    && pack.target.subjectId === target.subjectId
+    && (!target.domainId || pack.target.domainId === target.domainId)
+    && (!target.skillId || pack.target.skillId === target.skillId)
+  ))
+}
+
 export function getSupportedTutorTargets() {
   return contextPacks.map((pack) => ({ ...pack.target }))
 }

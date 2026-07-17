@@ -3,7 +3,7 @@ import { createSubjectFilters } from './taxonomy/contentTaxonomy.js'
 const defaultActions = [
   {
     label: 'Ask Questions',
-    helpText: 'Ask for explanations, step-by-step help, or quick clarification on this topic.',
+    helpText: 'Ask the test tutor for explanations, step-by-step help, strategy, or a study plan.',
   },
   {
     label: 'Practice Questions',
@@ -11,7 +11,7 @@ const defaultActions = [
   },
   {
     label: 'View Topics',
-    helpText: 'Go back to the full topic list and pick something else to study.',
+    helpText: 'Browse the test’s units and skills when you want more focused help.',
   },
 ]
 

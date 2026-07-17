@@ -3,27 +3,16 @@
 .chat-page {
   width: min(820px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 44px 0 64px;
+  padding: 32px 0 48px;
 }
 
 .chat-header { margin-bottom: 18px; }
-.chat-header p { margin: 18px 0 5px; color: #8c2f2f; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+.chat-header p { max-width: 620px; margin: 8px 0 0; color: #555; line-height: 1.55; }
 .chat-header h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.8rem); }
-.chat-header > span { display: block; margin-top: 6px; color: #555; }
-.chat-back { padding: 0; border: 0; background: transparent; color: #6f2727; font-weight: 800; cursor: pointer; }
-
-.chat-prototype-notice {
-  margin-bottom: 12px;
-  padding: 11px 13px;
-  border-left: 4px solid #8a6a00;
-  background: #fff8d8;
-  color: #4e410f;
-  font-size: 0.86rem;
-  line-height: 1.5;
-}
+.chat-back { margin-bottom: 18px; padding: 0; border: 0; background: transparent; color: #6f2727; font-weight: 800; cursor: pointer; }
 
 .chat-panel { border: 1px solid #bbb; background: #fff; }
-.chat-messages { min-height: 360px; max-height: 58vh; overflow-y: auto; display: grid; align-content: start; gap: 13px; padding: 20px; }
+.chat-messages { min-height: 260px; max-height: 58vh; overflow-y: auto; display: grid; align-content: start; gap: 13px; padding: 20px; }
 .chat-welcome { max-width: 570px; margin: auto; text-align: center; color: #555; }
 .chat-welcome h2 { color: #222; }
 .chat-welcome p { line-height: 1.55; }
@@ -47,8 +36,6 @@
   padding: 5px 2px;
 }
 .chat-message-content .katex { font-size: 1.08em; }
-.chat-sources { margin-top: 11px; padding-top: 8px; border-top: 1px solid #ccc; color: #555; font-size: 0.76rem; font-weight: 700; }
-
 .chat-loading, .chat-error { justify-self: start; padding: 12px 14px; }
 .chat-loading { display: flex; align-items: center; gap: 9px; color: #555; }
 .chat-loading span { width: 12px; height: 12px; border: 2px solid #bbb; border-top-color: #8c2f2f; border-radius: 50%; animation: chat-spin 0.8s linear infinite; }
@@ -70,7 +57,7 @@
 
 @media (max-width: 600px) {
   .chat-page { width: calc(100% - 20px); padding-top: 28px; }
-  .chat-messages { min-height: 330px; max-height: 55vh; padding: 13px; }
+  .chat-messages { min-height: 250px; max-height: 55vh; padding: 13px; }
   .chat-message { max-width: 94%; }
   .chat-composer { padding: 13px; }
 }
