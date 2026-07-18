@@ -1,4 +1,20 @@
+import {
+  AP_CHEMISTRY_FRAMEWORK_ID,
+  apChemistrySciencePractices,
+  apChemistryUnits,
+} from './apChemistryFramework.js'
+
 export const TAXONOMY_VERSION = 1
+
+export const legacyDomainAliases = Object.freeze({
+  'ap-chemistry': Object.freeze({
+    'atomic-structure': 'atomic-structure-properties',
+    bonding: 'compound-structure-properties',
+    reactions: 'chemical-reactions',
+    applications: 'thermodynamics-electrochemistry',
+    thermodynamics: null,
+  }),
+})
 
 export const tutorCapabilities = Object.freeze({
   'linear-equations-one-variable': Object.freeze({
@@ -46,6 +62,11 @@ export const answeringMethods = [
   { id: 'select-option', label: 'Select an option' },
   { id: 'enter-answer', label: 'Enter an answer' },
   { id: 'write-response', label: 'Write a response' },
+]
+
+export const responseFormats = [
+  { id: 'essay', label: 'Essay' },
+  { id: 'grid-in', label: 'Grid-In' },
 ]
 
 const satMathDomains = [
@@ -106,6 +127,33 @@ const satMathDomains = [
   })),
 }))
 
+const apChemistryDomains = apChemistryUnits.map((courseUnit) => ({
+  id: courseUnit.id,
+  label: courseUnit.label,
+  order: courseUnit.order,
+  officialNumber: courseUnit.officialNumber,
+  frameworkId: AP_CHEMISTRY_FRAMEWORK_ID,
+  weighting: courseUnit.weighting,
+  description: courseUnit.description,
+  skills: courseUnit.topics.map((courseTopic, index) => ({
+    id: courseTopic.id,
+    label: courseTopic.label,
+    description: courseTopic.summary,
+    order: index + 1,
+    domainId: courseUnit.id,
+    officialNumber: courseTopic.officialNumber,
+    frameworkId: AP_CHEMISTRY_FRAMEWORK_ID,
+    practiceIds: courseTopic.practiceIds,
+    learningObjectives: courseTopic.learningObjectives,
+    tutor: Object.freeze({
+      provider: 'ap-chemistry-tutor',
+      promptTitle: `Ask about ${courseTopic.label.toLowerCase()}`,
+      suggestedQuestion: `Can you teach me ${courseTopic.label.toLowerCase()} with an AP Chemistry example?`,
+    }),
+    search: Object.freeze({ aliases: [], tags: ['ap-chemistry', `unit-${courseUnit.officialNumber}`] }),
+  })),
+}))
+
 export const exams = [
   {
     id: 'sat', label: 'SAT', provider: 'college-board',
@@ -114,6 +162,18 @@ export const exams = [
       domains: satMathDomains,
       questionTypeIds: ['multiple-choice', 'student-produced-response'],
       answeringMethodIds: ['select-option', 'enter-answer'],
+    }],
+  },
+  {
+    id: 'ap', label: 'AP', provider: 'college-board',
+    subjects: [{
+      id: 'ap-chemistry', label: 'Chemistry', routeSlug: 'ap-chemistry',
+      frameworkId: AP_CHEMISTRY_FRAMEWORK_ID,
+      domains: apChemistryDomains,
+      questionTypeIds: ['multiple-choice', 'free-response'],
+      answeringMethodIds: ['select-option', 'write-response'],
+      responseFormatIds: ['essay', 'grid-in'],
+      showEmptyPracticeFilters: true,
     }],
   },
 ]
@@ -130,6 +190,17 @@ export function getDomain(subjectId, domainId) {
   return getSubject(subjectId)?.domains.find((domain) => domain.id === domainId) || null
 }
 
+export function resolveDomainId(subjectId, domainId) {
+  if (!domainId) return { status: 'none', domainId: null }
+  if (getDomain(subjectId, domainId)) return { status: 'canonical', domainId }
+  const aliases = legacyDomainAliases[subjectId]
+  if (!aliases || !Object.prototype.hasOwnProperty.call(aliases, domainId)) return { status: 'invalid', domainId: null }
+  const canonicalId = aliases[domainId]
+  return canonicalId
+    ? { status: 'alias', domainId: canonicalId, legacyDomainId: domainId }
+    : { status: 'subject-fallback', domainId: null, legacyDomainId: domainId }
+}
+
 export function getSkill(subjectId, skillId) {
   return getSubject(subjectId)?.domains.flatMap((domain) => domain.skills).find((skill) => skill.id === skillId) || null
 }
@@ -138,16 +209,30 @@ export function getQuestionType(typeId) {
   return questionTypes.find((type) => type.id === typeId) || null
 }
 
+export function getSciencePracticeSubskill(subskillId) {
+  return apChemistrySciencePractices.flatMap((practice) => (
+    practice.subskills.map((subskill) => ({ ...subskill, practiceId: practice.id }))
+  )).find((subskill) => subskill.id === subskillId) || null
+}
+
 export function resolveSubjectLocation(subjectId, { domainId = null, skillId = null } = {}) {
   const subject = getSubject(subjectId)
   if (!subject) return { status: 'invalid-subject', subject: null, domain: null, skill: null }
   const skill = skillId ? getSkill(subjectId, skillId) : null
-  const resolvedDomainId = domainId || skill?.domainId || null
+  const domainResolution = resolveDomainId(subjectId, domainId)
+  if (domainResolution.status === 'invalid') return { status: 'invalid-target', subject, domain: null, skill: null }
+  if (domainResolution.status === 'subject-fallback' && !skillId) {
+    return { status: 'valid', subject, domain: null, skill: null, legacyRedirect: 'subject' }
+  }
+  const resolvedDomainId = domainResolution.domainId || skill?.domainId || null
   const domain = resolvedDomainId ? getDomain(subjectId, resolvedDomainId) : null
   if ((domainId && !domain) || (skillId && !skill) || (skill && domain?.id !== skill.domainId)) {
     return { status: 'invalid-target', subject, domain: null, skill: null }
   }
-  return { status: 'valid', subject, domain, skill }
+  return {
+    status: 'valid', subject, domain, skill,
+    ...(domainResolution.status === 'alias' ? { legacyRedirect: domain.id } : {}),
+  }
 }
 
 export function createSkillBrowserUrl(subjectId, skillId) {
@@ -194,23 +279,35 @@ export function createContextTarget({ examId, subjectId, domainId, skillId }) {
 export function createSubjectFilters(subjectId) {
   const subject = getSubject(subjectId)
   if (!subject) return []
-  return [
+  const filters = [
     {
       id: 'questionType', label: 'Question type', selection: 'multi',
-      options: subject.questionTypeIds.map(getQuestionType),
+      options: subject.questionTypeIds.map((id) => ({
+        ...getQuestionType(id),
+        showWhenEmpty: subject.showEmptyPracticeFilters,
+      })),
     },
     {
       id: 'domain', label: 'Domain', selection: 'multi', reporting: true,
-      options: subject.domains.map(({ id, label }) => ({ id, label })),
+      options: subject.domains.map(({ id, label }) => ({ id, label, showWhenEmpty: subject.showEmptyPracticeFilters })),
     },
     {
       id: 'skill', label: 'Skill', selection: 'multi',
       visibleWhen: { groupId: 'domain', hasSelection: true },
       options: subject.domains.flatMap((domain) => domain.skills.map(({ id, label }) => ({
-        id, label, parentId: domain.id,
+        id, label, parentId: domain.id, showWhenEmpty: subject.showEmptyPracticeFilters,
       }))),
     },
   ]
+  if (subject.responseFormatIds?.length) {
+    filters.splice(1, 0, {
+      id: 'responseFormat', label: 'Response format', selection: 'multi',
+      visibleWhen: { groupId: 'questionType', includesAny: ['free-response'] },
+      appliesTo: { groupId: 'questionType', includesAny: ['free-response'] },
+      options: subject.responseFormatIds.map((id) => responseFormats.find((format) => format.id === id)),
+    })
+  }
+  return filters
 }
 
 export function validateQuestionTaxonomy(question) {

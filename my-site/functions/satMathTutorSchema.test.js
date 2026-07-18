@@ -17,6 +17,7 @@ test('the callable input schema accepts skill, unit, and whole-test targets', ()
     { scope: 'domain', ...baseTarget },
     { scope: 'subject', examId: 'sat', subjectId: 'sat-math' },
     { scope: 'subject', examId: 'ap', subjectId: 'ap-chemistry' },
+    { scope: 'subject', examId: 'ap', subjectId: 'ap-biology' },
   ]) {
     const parsed = TutorInputSchema.safeParse({ target, message: 'Help me study.', history: [] })
     assert.equal(parsed.success, true)

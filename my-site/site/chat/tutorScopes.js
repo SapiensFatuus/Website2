@@ -1,25 +1,24 @@
-import { getSkill, getSubject } from '../taxonomy/contentTaxonomy.js'
-
-const apChemistryUnits = Object.freeze([
-  ['atomic-structure', 'Atomic Structure and Properties'],
-  ['bonding', 'Molecular and Ionic Structure'],
-  ['reactions', 'Chemical Reactions'],
-  ['kinetics', 'Kinetics'],
-  ['thermodynamics', 'Thermodynamics'],
-  ['equilibrium', 'Equilibrium'],
-  ['acids-bases', 'Acids and Bases'],
-  ['applications', 'Applications of Thermodynamics'],
-].map(([id, label]) => Object.freeze({ id, label, skills: Object.freeze([]) })))
+import { getSkill, getSubject, resolveSubjectLocation } from '../taxonomy/contentTaxonomy.js'
+import { findTopicBySlug } from '../siteData.js'
 
 export function getTutorSubject(examId, subjectId) {
-  if (examId === 'sat' && subjectId === 'sat-math') {
-    const subject = getSubject(subjectId)
-    return subject ? { ...subject, label: 'SAT Math' } : null
+  const canonicalSubject = getSubject(subjectId)
+  if (canonicalSubject?.examId === examId) {
+    return {
+      ...canonicalSubject,
+      label: examId === 'sat' ? `SAT ${canonicalSubject.label}` : `AP ${canonicalSubject.label}`,
+    }
   }
-  if (examId === 'ap' && subjectId === 'ap-chemistry') {
-    return { examId, id: subjectId, label: 'AP Chemistry', domains: apChemistryUnits }
+  const test = findTopicBySlug(subjectId)
+  if (!test || test.examId !== examId) return null
+  return {
+    examId,
+    id: subjectId,
+    label: test.title.replace(': ', ' '),
+    summary: test.summary,
+    domains: Object.freeze([]),
+    general: true,
   }
-  return null
 }
 
 export function resolveTutorUiTarget({ examId, subjectId, scope, domainId, skillId } = {}) {
@@ -27,12 +26,16 @@ export function resolveTutorUiTarget({ examId, subjectId, scope, domainId, skill
   if (!subject) return null
   const resolvedScope = scope || (skillId ? 'skill' : domainId ? 'domain' : 'subject')
   if (resolvedScope === 'subject') return { scope: 'subject', examId, subjectId }
-  const domain = subject.domains.find((item) => item.id === domainId)
-  if (!domain) return null
-  if (resolvedScope === 'domain') return { scope: 'domain', examId, subjectId, domainId }
-  const skill = subjectId === 'sat-math' ? getSkill(subjectId, skillId) : null
-  if (!skill || skill.domainId !== domain.id) return null
-  return { scope: 'skill', examId, subjectId, domainId, skillId }
+  const location = resolveSubjectLocation(subjectId, { domainId, skillId })
+  if (location.status !== 'valid') return null
+  if (location.legacyRedirect === 'subject') return { scope: 'subject', examId, subjectId }
+  if (resolvedScope === 'domain' && location.domain) {
+    return { scope: 'domain', examId, subjectId, domainId: location.domain.id }
+  }
+  if (resolvedScope === 'skill' && location.domain && location.skill) {
+    return { scope: 'skill', examId, subjectId, domainId: location.domain.id, skillId: location.skill.id }
+  }
+  return null
 }
 
 export function getTutorUiScopeDetails(target) {
@@ -75,8 +78,8 @@ export function createTutorChatUrl(target) {
 }
 
 export function createSubjectTutorUrl(subjectId) {
-  const examId = subjectId === 'sat-math' ? 'sat' : subjectId === 'ap-chemistry' ? 'ap' : null
-  return examId ? createTutorChatUrl({ examId, subjectId, scope: 'subject' }) : null
+  const test = findTopicBySlug(subjectId)
+  return test ? createTutorChatUrl({ examId: test.examId, subjectId, scope: 'subject' }) : null
 }
 
 export function createDomainTutorUrl(subjectId, domainId) {

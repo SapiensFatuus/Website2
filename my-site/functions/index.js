@@ -1,9 +1,10 @@
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore'
-import { onRequest } from 'firebase-functions/v2/https'
+import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https'
 import { onCallGenkit } from 'firebase-functions/https'
 import { logger } from 'firebase-functions'
 import { satMathTutorFlow } from './satMathTutor.js'
+import { StudyTutorError, runStudyTutorRequest } from './studyTutor.js'
 
 initializeApp()
 
@@ -188,4 +189,27 @@ export const satMathTutor = onCallGenkit(
     timeoutSeconds: 60,
   },
   satMathTutorFlow,
+)
+
+export const studyTutor = onCall(
+  {
+    enforceAppCheck: true,
+    cors: [
+      'https://website2-c8d1e.web.app',
+      'https://website2-c8d1e.firebaseapp.com',
+      /^http:\/\/127\.0\.0\.1(?::\d+)?$/,
+      /^http:\/\/localhost(?::\d+)?$/,
+    ],
+    maxInstances: 10,
+    timeoutSeconds: 60,
+  },
+  async (request) => {
+    try {
+      return await runStudyTutorRequest(request.data, { uid: request.auth?.uid || null })
+    } catch (error) {
+      if (error instanceof StudyTutorError) throw new HttpsError(error.code, error.message)
+      logger.error('Study tutor request failed', error)
+      throw new HttpsError('internal', 'The tutor could not answer. Please retry.')
+    }
+  },
 )

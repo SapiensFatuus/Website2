@@ -95,6 +95,29 @@ test('catalog rejects renderer, type, and answering-method mismatches', () => {
   assert.match(errorsFor(unsupportedType), /does not support question type free-response/)
 })
 
+test('future AP Chemistry questions require objective and science-practice alignment', () => {
+  const chemistry = cloneQuestion()
+  chemistry.id = 'ap-chemistry-equilibrium-example-001'
+  chemistry.taxonomy = {
+    ...chemistry.taxonomy,
+    examId: 'ap',
+    subjectId: 'ap-chemistry',
+    domainId: 'equilibrium',
+    skillId: 'introduction-equilibrium',
+    learningObjectiveIds: ['7.1.A'],
+    sciencePracticeIds: ['6.D'],
+  }
+  assert.equal(validateCanonicalQuestion(chemistry).valid, true)
+
+  delete chemistry.taxonomy.learningObjectiveIds
+  assert.match(errorsFor(chemistry), /require learningObjectiveIds/)
+  chemistry.taxonomy.learningObjectiveIds = ['7.2.A']
+  assert.match(errorsFor(chemistry), /belong to the selected topic/)
+  chemistry.taxonomy.learningObjectiveIds = ['7.1.A']
+  chemistry.taxonomy.sciencePracticeIds = ['9.Z']
+  assert.match(errorsFor(chemistry), /valid science-practice subskills/)
+})
+
 test('catalog validates selected-response options and correct answers', () => {
   const missingOptions = cloneQuestion()
   missingOptions.answer.options = []
@@ -206,10 +229,10 @@ test('coverage is deterministic and reports all current catalog gaps', () => {
     { id: 'student-produced-response', count: 2 },
   ])
   assert.deepEqual(coverage.sourceKinds, [{ id: 'ai-generated', count: 11 }])
-  assert.equal(coverage.skills.length, 20)
-  assert.equal(coverage.zeroCoverageSkills.length, 14)
-  assert.equal(coverage.belowMinimumSkills.length, 20)
-  assert.match(formatCatalogCoverage(coverage), /Skills with zero questions \(14\)/)
+  assert.equal(coverage.skills.length, 108)
+  assert.equal(coverage.zeroCoverageSkills.length, 102)
+  assert.equal(coverage.belowMinimumSkills.length, 108)
+  assert.match(formatCatalogCoverage(coverage), /Skills with zero questions \(102\)/)
   assert.equal(
     formatCatalogCoverage(coverage),
     formatCatalogCoverage(createCatalogCoverage(canonicalQuestions, { minimumPerSkill: 5 })),

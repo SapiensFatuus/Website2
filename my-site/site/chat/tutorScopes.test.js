@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { topics } from '../siteData.js'
 import {
   claimOpeningPrompt,
   createInitialTutorPrompt,
@@ -23,6 +24,35 @@ test('UI scope resolver supports AP Chemistry whole-test and unit targets', () =
   assert.equal(subjectUrl, '/chat.html?exam=ap&test=ap-chemistry')
   const equilibrium = resolveTutorUiTarget({ examId: 'ap', subjectId: 'ap-chemistry', scope: 'domain', domainId: 'equilibrium' })
   assert.equal(getTutorUiScopeDetails(equilibrium).label, 'Equilibrium')
+  const topic = resolveTutorUiTarget({
+    examId: 'ap', subjectId: 'ap-chemistry', scope: 'skill',
+    domainId: 'equilibrium', skillId: 'introduction-equilibrium',
+  })
+  assert.equal(getTutorUiScopeDetails(topic).label, 'Introduction to Equilibrium')
+})
+
+test('AP Chemistry tutor URLs canonicalize legacy units and safely broaden ambiguous thermodynamics', () => {
+  assert.equal(
+    createDomainTutorUrl('ap-chemistry', 'atomic-structure'),
+    '/chat.html?exam=ap&test=ap-chemistry&unit=atomic-structure-properties',
+  )
+  assert.equal(
+    createDomainTutorUrl('ap-chemistry', 'applications'),
+    '/chat.html?exam=ap&test=ap-chemistry&unit=thermodynamics-electrochemistry',
+  )
+  assert.equal(createDomainTutorUrl('ap-chemistry', 'thermodynamics'), '/chat.html?exam=ap&test=ap-chemistry')
+})
+
+test('every listed test has a canonical whole-test tutor URL', () => {
+  for (const testEntry of topics) {
+    const target = resolveTutorUiTarget({
+      examId: testEntry.examId,
+      subjectId: testEntry.slug,
+      scope: 'subject',
+    })
+    assert.ok(target, `${testEntry.title} should resolve to a tutor target`)
+    assert.equal(createSubjectTutorUrl(testEntry.slug), `/chat.html?exam=${testEntry.examId}&test=${testEntry.slug}`)
+  }
 })
 
 test('tutor URLs use test, unit, and skill terminology without exposing scope', () => {
@@ -52,5 +82,5 @@ test('an opening prompt key can only be claimed once', () => {
 
 test('invalid cross-domain and unsupported targets fail safely', () => {
   assert.equal(resolveTutorUiTarget({ examId: 'sat', subjectId: 'sat-math', scope: 'skill', domainId: 'algebra', skillId: 'circles' }), null)
-  assert.equal(resolveTutorUiTarget({ examId: 'ap', subjectId: 'ap-biology', scope: 'subject' }), null)
+  assert.equal(resolveTutorUiTarget({ examId: 'ap', subjectId: 'not-a-test', scope: 'subject' }), null)
 })

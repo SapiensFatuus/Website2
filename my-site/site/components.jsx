@@ -10,6 +10,7 @@ import {
   withSkillSearchQuery,
 } from './catalog/skillSearch'
 import {
+  getSubject,
   resolveSubjectLocation,
 } from './taxonomy/contentTaxonomy'
 
@@ -417,6 +418,8 @@ export function TopicPage({ topic, onActionClick, onNavigate }) {
   const overviewCards = topic?.overviewCards || fallbackOverviewCards
   const sections = topic?.sections || fallbackSections
   const actions = topic?.actions || fallbackActions
+  const visibleActions = actions.filter((action) => action.label !== 'View Topics' || getSubject(topic?.slug))
+  const testTutorName = topic?.title.replace(': ', ' ') || 'Test'
   const sectionLines = sections.flatMap((section) => {
     const lines = [
       {
@@ -482,27 +485,23 @@ export function TopicPage({ topic, onActionClick, onNavigate }) {
       </section>
 
       <section className="topic-actions" aria-label="Learning options">
-        <div className="topic-actions-intro">
-          Choose how you want to prepare for this test.
-        </div>
-
-        {actions.map((action) => (
+        <p className="topic-actions-intro">Choose what you want to do next.</p>
+        <div className="topic-action-row">
+        {visibleActions.map((action) => (
           <div className="topic-action-card" key={action.label}>
-            <div className="topic-action-help">
-              {action.helpText ? <HelpTooltip text={action.helpText} side="top" /> : null}
-            </div>
             <button
               className="topic-action-btn"
               data-method={action.label}
               type="button"
               onClick={onActionClick}
             >
-              {action.label === 'Ask Questions' && ['sat-math', 'ap-chemistry'].includes(topic?.slug)
-                ? `Ask the ${topic.slug === 'sat-math' ? 'SAT Math' : 'AP Chemistry'} Tutor`
-                : action.label === 'View Topics' ? 'View units and skills' : action.label}
+              {action.label === 'Ask Questions'
+                ? `Ask the ${testTutorName} Tutor`
+                : action.label === 'View Topics' ? 'Browse units and skills' : 'Practice questions'}
             </button>
           </div>
         ))}
+        </div>
       </section>
 
       <div className="topic-back-wrap">
@@ -516,6 +515,7 @@ export function TopicPage({ topic, onActionClick, onNavigate }) {
 
 function SkillCatalogCard({ entry, isSelected, selectedSkillRef, searchQuery, onNavigate }) {
   const browserUrl = withSkillSearchQuery(entry.browserUrl, searchQuery)
+  const itemLabel = entry.subjectId === 'ap-chemistry' ? 'topic' : 'skill'
   return (
     <article
       className={`skill-card${isSelected ? ' selected' : ''}`}
@@ -538,7 +538,7 @@ function SkillCatalogCard({ entry, isSelected, selectedSkillRef, searchQuery, on
       <div className="skill-actions">
         {entry.practiceAvailable ? (
           <a className="skill-practice-button" href={entry.practiceUrl} onClick={onNavigate(entry.practiceUrl)}>
-            Practice this skill
+            Practice this {itemLabel}
           </a>
         ) : (
           <span className="skill-action-unavailable">
@@ -547,7 +547,7 @@ function SkillCatalogCard({ entry, isSelected, selectedSkillRef, searchQuery, on
         )}
         {entry.tutorAvailable ? (
           <a className="skill-ai-button enabled" href={entry.tutorUrl} onClick={onNavigate(entry.tutorUrl)}>
-            Teach me this skill
+            Teach me this {itemLabel}
           </a>
         ) : (
           <span className="skill-action-unavailable">
@@ -567,6 +567,7 @@ export function TopicBrowserPage({ topic, domainId, skillId, searchQuery = '', o
   const selectedSkillRef = useRef(null)
   const searchInputRef = useRef(null)
   const selectedSkillId = target.skill?.id
+  const itemLabel = topic?.slug === 'ap-chemistry' ? 'topic' : 'skill'
   const safeSearchQuery = sanitizeSkillSearchQuery(searchQuery)
   const normalizedSearchQuery = normalizeSearchText(safeSearchQuery)
   const isSearchActive = Boolean(normalizedSearchQuery)
@@ -593,7 +594,7 @@ export function TopicBrowserPage({ topic, domainId, skillId, searchQuery = '', o
     window.requestAnimationFrame(() => selectedSkillRef.current?.scrollIntoView({ block: 'center' }))
   }, [selectedSkillId])
 
-  if (!topic || topic.slug !== 'sat-math' || target.status === 'invalid-subject') {
+  if (!topic || target.status === 'invalid-subject') {
     return (
       <main className="page topic-browser-empty">
         <h1>Unit browser not found</h1>
@@ -608,9 +609,9 @@ export function TopicBrowserPage({ topic, domainId, skillId, searchQuery = '', o
       <main className="page topic-browser-empty">
         <p className="topic-browser-eyebrow">{topic.title}</p>
         <h1>Skill not found</h1>
-        <p>That unit or skill is not part of SAT Math.</p>
-        <a href="/topics.html?topic=sat-math" onClick={onNavigate('/topics.html?topic=sat-math')}>
-          Browse all SAT Math units
+        <p>That unit or topic is not part of {topic.title}.</p>
+        <a href={`/topics.html?topic=${topic.slug}`} onClick={onNavigate(`/topics.html?topic=${topic.slug}`)}>
+          Browse all {topic.title} units
         </a>
       </main>
     )
@@ -634,26 +635,26 @@ export function TopicBrowserPage({ topic, domainId, skillId, searchQuery = '', o
     <main className="page topic-browser-page">
       <header className="topic-browser-header">
         <p className="topic-browser-eyebrow">{topic.title}</p>
-        <h1>SAT Math units and skills</h1>
-        <p>Start with the full test tutor, or browse units and skills when you need focused help.</p>
+        <h1>{topic.title} units and topics</h1>
+        <p>Find a topic or open a unit for focused practice.</p>
       </header>
 
       <section className="skill-search-panel" aria-labelledby="skill-search-heading">
         <div className="skill-search-heading">
           <div>
-            <h2 id="skill-search-heading">Find a skill</h2>
-            <p>Search skill names, descriptions, aliases, tags, or units.</p>
+            <h2 id="skill-search-heading">Find a {itemLabel}</h2>
+            <p>Search by {itemLabel}, unit, or common term.</p>
           </div>
           {safeSearchQuery ? <button type="button" className="skill-search-clear" onClick={clearSearch}>Clear search</button> : null}
         </div>
-        <label htmlFor="skill-search-input">Search SAT Math skills</label>
+        <label htmlFor="skill-search-input">Search {topic.title} topics</label>
         <input
           id="skill-search-input"
           ref={searchInputRef}
           type="search"
           value={safeSearchQuery}
           maxLength="100"
-          placeholder="Try slope, triangles, or solve for x"
+          placeholder={topic.slug === 'sat-math' ? 'Try slope, triangles, or solve for x' : 'Try equilibrium, buffers, or calorimetry'}
           autoComplete="off"
           onChange={(event) => onSearchChange(sanitizeSkillSearchQuery(event.target.value))}
         />
@@ -662,7 +663,7 @@ export function TopicBrowserPage({ topic, domainId, skillId, searchQuery = '', o
             ? `${searchResults.length} ${searchResults.length === 1 ? 'skill' : 'skills'} found for “${safeSearchQuery.trim()}”.`
             : hasInvalidSearchText
               ? 'Enter at least one letter or number to search.'
-              : 'Enter a search, or browse the four units below.'}
+              : `Enter a search, or browse the ${target.subject.domains.length} units below.`}
         </p>
       </section>
 
@@ -713,7 +714,7 @@ export function TopicBrowserPage({ topic, domainId, skillId, searchQuery = '', o
                   <strong>{domain.label}</strong>
                   <span>{domain.description}</span>
                 </span>
-                <span className="domain-skill-count">{domain.skills.length} skills</span>
+                <span className="domain-skill-count">{domain.skills.length} topics</span>
                 <span className="domain-chevron" aria-hidden="true">{isExpanded ? '−' : '+'}</span>
               </button>
 
@@ -748,7 +749,7 @@ export function TopicBrowserPage({ topic, domainId, skillId, searchQuery = '', o
 
       <div className="topic-back-wrap">
         <a href={`/topic.html?topic=${topic.slug}`} onClick={onNavigate(`/topic.html?topic=${topic.slug}`)}>
-          Back to SAT Math overview
+          Back to {topic.title} overview
         </a>
       </div>
     </main>

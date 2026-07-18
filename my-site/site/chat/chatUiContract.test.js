@@ -14,7 +14,6 @@ test('chat UI stays free of manual scope and source controls', () => {
     'Jump to a unit',
     'Local material used',
     'Answered without a local sample source',
-    'chat-sources',
     'chat-scope-panel',
   ]
   removedUi.forEach((text) => {
@@ -27,4 +26,6 @@ test('chat UI identifies the test tutor and keeps only conversational guidance',
   assert.match(chatPage, /subject\.label} Tutor/)
   assert.match(chatPage, /I’ll focus on whatever you need/)
   assert.match(chatPage, /Your question/)
+  assert.match(chatPage, /Attach homework photo/)
+  assert.match(chatPage, /chat-sources/)
 })

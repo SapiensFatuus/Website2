@@ -1,4 +1,4 @@
-import { createSubjectFilters } from './taxonomy/contentTaxonomy.js'
+import { createSubjectFilters, getSubject } from './taxonomy/contentTaxonomy.js'
 
 const defaultActions = [
   {
@@ -32,17 +32,11 @@ const commonMaterials = {
     { id: 'statistics', label: 'Statistics' },
     { id: 'advanced-math', label: 'Advanced Math' },
   ],
-  'ap-chemistry': [
-    { id: 'atomic-structure', label: 'Atomic Structure' },
-    { id: 'reactions', label: 'Chemical Reactions' },
-    { id: 'thermodynamics', label: 'Thermodynamics' },
-    { id: 'equilibrium', label: 'Equilibrium' },
-  ],
 }
 
 function createQuestionFilters(topic) {
   const isSatMath = topic.slug === 'sat-math'
-  if (isSatMath) return createSubjectFilters('sat-math')
+  if (getSubject(topic.slug)) return createSubjectFilters(topic.slug)
   const questionTypeOptions = isSatMath
     ? [
         { id: 'multiple-choice', label: 'Multiple Choice', renderer: 'multiple-choice' },
@@ -84,6 +78,7 @@ function createQuestionFilters(topic) {
 
 function createTopic(topic) {
   return {
+    examId: topic.examId || (topic.slug.startsWith('sat-') ? 'sat' : 'ap'),
     ...topic,
     overviewCards: topic.overviewCards || defaultOverviewCards,
     sections: topic.sections || defaultSections,

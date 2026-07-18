@@ -29,15 +29,22 @@ export function sanitizeFilterSelections(topic, selections = {}) {
   return sanitized
 }
 
-export function matchesFilters(question, filters = {}, excludedGroupId = null) {
-  return Object.entries(filters).every(([groupId, selected]) => (
-    groupId === excludedGroupId
-    || !selected?.length
-    || selected.some((value) => question.classifications[groupId]?.includes(value))
-  ))
+export function matchesFilters(question, filters = {}, excludedGroupId = null, filterGroups = []) {
+  return Object.entries(filters).every(([groupId, selected]) => {
+    const group = filterGroups.find((item) => item.id === groupId)
+    const appliesTo = group?.appliesTo
+    const appliesToQuestion = !appliesTo || appliesTo.includesAny.some((value) => (
+      question.classifications[appliesTo.groupId]?.includes(value)
+    ))
+
+    return groupId === excludedGroupId
+      || !selected?.length
+      || !appliesToQuestion
+      || selected.some((value) => question.classifications[groupId]?.includes(value))
+  })
 }
 
-export function getQuestions({ topic, filters = {}, type, materials = [] }) {
+export function getQuestions({ topic, filters = {}, type, materials = [], filterGroups = [] }) {
   const normalizedType = type === 'grid-in' ? 'student-produced-response' : type
   const satDomainAliases = {
     geometry: 'geometry-trigonometry', statistics: 'problem-solving-data-analysis',
@@ -56,7 +63,7 @@ export function getQuestions({ topic, filters = {}, type, materials = [] }) {
   return demoQuestions.filter((question) => (
     question.topic === topic
     && SUPPORTED_RENDERERS.has(question.renderer)
-    && matchesFilters(question, normalizedFilters)
+    && matchesFilters(question, normalizedFilters, null, filterGroups)
   ))
 }
 
@@ -74,10 +81,12 @@ export function getAvailableFilterGroups(topic, selections = {}) {
         (!option.renderer || SUPPORTED_RENDERERS.has(option.renderer))
         && (!option.parentId || sanitized.domain?.includes(option.parentId))
         && (
+          option.showWhenEmpty
+          ||
           sanitized[group.id]?.includes(option.id)
           || topicQuestions.some((question) => (
             question.classifications[group.id]?.includes(option.id)
-            && matchesFilters(question, sanitized, group.id)
+            && matchesFilters(question, sanitized, group.id, topic.questionFilters)
           ))
         )
       )),

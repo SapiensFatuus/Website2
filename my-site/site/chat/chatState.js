@@ -23,6 +23,7 @@ export function chatReducer(state, action) {
         insufficient: action.response.insufficient,
         effectiveTarget: action.response.effectiveTarget,
         classification: action.response.classification,
+        sources: action.response.sources || [],
         mode: action.response.mode,
       }],
       status: 'ready',
@@ -30,6 +31,11 @@ export function chatReducer(state, action) {
       retryRequest: null,
     }
   }
-  if (action.type === 'error') return { ...state, status: 'error', error: action.error }
+  if (action.type === 'error') return {
+    ...state,
+    status: 'error',
+    error: action.error,
+    retryRequest: action.retryable === false ? null : state.retryRequest,
+  }
   return state
 }

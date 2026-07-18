@@ -3,6 +3,8 @@ import {
   answeringMethods,
   createContextTarget,
   getQuestionType,
+  getSciencePracticeSubskill,
+  getSkill,
   getSubject,
 } from '../../taxonomy/contentTaxonomy.js'
 
@@ -122,6 +124,22 @@ export function validateCanonicalQuestion(question) {
     }
     const target = createContextTarget(taxonomy)
     if (target?.level !== 'skill') errors.push('taxonomy must reference a valid domain/skill pairing')
+    if (taxonomy.subjectId === 'ap-chemistry') {
+      const skill = getSkill(taxonomy.subjectId, taxonomy.skillId)
+      const objectiveIds = new Set(skill?.learningObjectives?.map((objective) => objective.id) || [])
+      if (!Array.isArray(taxonomy.learningObjectiveIds) || !taxonomy.learningObjectiveIds.length) {
+        errors.push('AP Chemistry questions require learningObjectiveIds')
+      } else if (new Set(taxonomy.learningObjectiveIds).size !== taxonomy.learningObjectiveIds.length
+        || taxonomy.learningObjectiveIds.some((id) => !objectiveIds.has(id))) {
+        errors.push('AP Chemistry learningObjectiveIds must be unique and belong to the selected topic')
+      }
+      if (!Array.isArray(taxonomy.sciencePracticeIds) || !taxonomy.sciencePracticeIds.length) {
+        errors.push('AP Chemistry questions require sciencePracticeIds')
+      } else if (new Set(taxonomy.sciencePracticeIds).size !== taxonomy.sciencePracticeIds.length
+        || taxonomy.sciencePracticeIds.some((id) => !getSciencePracticeSubskill(id))) {
+        errors.push('AP Chemistry sciencePracticeIds must be unique valid science-practice subskills')
+      }
+    }
     const questionType = getQuestionType(taxonomy.questionTypeId)
     if (!questionType) errors.push(`unknown question type: ${taxonomy.questionTypeId || '(missing)'}`)
     if (!answeringMethods.some((method) => method.id === taxonomy.answeringMethodId)) {

@@ -2,6 +2,7 @@ import { vertexAI } from '@genkit-ai/google-genai'
 import { genkit, z } from 'genkit'
 import {
   buildTutorPrompt,
+  buildTutorPromptParts,
   prepareTutorRequest,
   sanitizeTutorOutput,
   validateTutorRequest,
@@ -24,7 +25,7 @@ export const TutorInputSchema = z.object({
   })),
 })
 
-const TutorModelOutputSchema = z.object({
+export const TutorModelOutputSchema = z.object({
   answer: z.string(),
   sourceIds: z.array(z.string()),
   insufficient: z.boolean(),
@@ -34,9 +35,28 @@ const TutorModelOutputSchema = z.object({
 
 export const TutorOutputSchema = TutorModelOutputSchema.extend({
   effectiveTarget: TutorTargetSchema,
+  sources: z.array(z.object({ id: z.string(), label: z.string() })),
 })
 
 const ai = genkit({ plugins: [vertexAI({ location: 'us-central1' })] })
+
+export async function runTutorRequest(input, attachment = null) {
+  const validation = validateTutorRequest(input)
+  if (!validation.valid) throw new Error(validation.error)
+  const prepared = prepareTutorRequest(validation.value)
+  if (!prepared) throw new Error('The tutor could not resolve this request scope.')
+
+  const prompt = buildTutorPrompt({ ...validation.value, ...prepared })
+  const response = await ai.generate({
+    model: vertexAI.model('gemini-2.5-flash'),
+    prompt: buildTutorPromptParts(prompt, attachment),
+    output: { schema: TutorModelOutputSchema },
+    config: { temperature: 0.3, maxOutputTokens: 1400 },
+  })
+  const output = response.output
+  if (!output) throw new Error('Gemini returned no structured response.')
+  return sanitizeTutorOutput(output, prepared.materials, prepared.resolution)
+}
 
 export const satMathTutorFlow = ai.defineFlow(
   {
@@ -44,20 +64,5 @@ export const satMathTutorFlow = ai.defineFlow(
     inputSchema: TutorInputSchema,
     outputSchema: TutorOutputSchema,
   },
-  async (input) => {
-    const validation = validateTutorRequest(input)
-    if (!validation.valid) throw new Error(validation.error)
-    const prepared = prepareTutorRequest(validation.value)
-    if (!prepared) throw new Error('The tutor could not resolve this request scope.')
-
-    const response = await ai.generate({
-      model: vertexAI.model('gemini-2.5-flash'),
-      prompt: buildTutorPrompt({ ...validation.value, ...prepared }),
-      output: { schema: TutorModelOutputSchema },
-      config: { temperature: 0.3, maxOutputTokens: 1400 },
-    })
-    const output = response.output
-    if (!output) throw new Error('Gemini returned no structured response.')
-    return sanitizeTutorOutput(output, prepared.materials, prepared.resolution)
-  },
+  (input) => runTutorRequest(input),
 )

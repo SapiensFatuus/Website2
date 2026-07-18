@@ -52,7 +52,17 @@ test('available groups surface supported renderers with seeded questions', () =>
   const chemistryGroups = getAvailableFilterGroups(findTopicBySlug('ap-chemistry'), { questionType: ['free-response'] })
   assert.deepEqual(chemistryGroups.find((group) => group.id === 'questionType').options.map((option) => option.id), ['multiple-choice', 'free-response'])
   assert.deepEqual(chemistryGroups.find((group) => group.id === 'responseFormat').options.map((option) => option.id), ['essay', 'grid-in'])
-  assert.deepEqual(chemistryGroups.find((group) => group.id === 'material').options.map((option) => option.id), ['reactions', 'thermodynamics', 'equilibrium'])
+  assert.deepEqual(chemistryGroups.find((group) => group.id === 'domain').options.map((option) => option.id), [
+    'atomic-structure-properties',
+    'compound-structure-properties',
+    'properties-substances-mixtures',
+    'chemical-reactions',
+    'kinetics',
+    'thermochemistry',
+    'equilibrium',
+    'acids-bases',
+    'thermodynamics-electrochemistry',
+  ])
 })
 
 test('conditional groups follow parent selections and hidden values are cleared', () => {
@@ -96,14 +106,47 @@ test('free-response formats can be selected independently or together', () => {
 })
 
 test('multiple-choice and free-response can be mixed in one question pool', () => {
+  const chemistry = findTopicBySlug('ap-chemistry')
   const questions = getQuestions({
     topic: 'ap-chemistry',
     filters: { questionType: ['multiple-choice', 'free-response'] },
+    filterGroups: chemistry.questionFilters,
   })
 
   assert.equal(questions.length, 4)
   assert.ok(questions.some((question) => question.classifications.questionType.includes('multiple-choice')))
   assert.ok(questions.some((question) => question.classifications.questionType.includes('free-response')))
+})
+
+test('chemistry question types stay selectable and response formats only narrow free responses', () => {
+  const chemistry = findTopicBySlug('ap-chemistry')
+  const equilibriumFilters = { domain: ['equilibrium'] }
+  const availableTypes = getAvailableFilterGroups(chemistry, equilibriumFilters)
+    .find((group) => group.id === 'questionType')
+
+  assert.deepEqual(availableTypes.options.map((option) => option.id), ['multiple-choice', 'free-response'])
+  assert.deepEqual(reconcileFilterSelections(chemistry, {
+    ...equilibriumFilters,
+    questionType: ['multiple-choice', 'free-response'],
+  }), {
+    ...equilibriumFilters,
+    questionType: ['multiple-choice', 'free-response'],
+  })
+
+  const questions = getQuestions({
+    topic: 'ap-chemistry',
+    filters: {
+      questionType: ['multiple-choice', 'free-response'],
+      responseFormat: ['essay'],
+    },
+    filterGroups: chemistry.questionFilters,
+  })
+  assert.equal(questions.length, 3)
+  assert.ok(questions.some((question) => question.classifications.questionType.includes('multiple-choice')))
+  assert.ok(questions.every((question) => (
+    question.classifications.questionType.includes('multiple-choice')
+    || question.classifications.responseFormat.includes('essay')
+  )))
 })
 
 test('SAT selected-response and student-produced responses can be mixed', () => {
@@ -227,6 +270,41 @@ test('skills progressively disclose under selected domains', () => {
   assert.deepEqual(groups.find((group) => group.id === 'skill').options.map((option) => option.id), [
     'area-volume', 'lines-angles-triangles',
   ])
+})
+
+test('AP Chemistry topics progressively disclose under canonical units', () => {
+  const chemistry = findTopicBySlug('ap-chemistry')
+  assert.equal(getAvailableFilterGroups(chemistry).some((group) => group.id === 'skill'), false)
+  const groups = getAvailableFilterGroups(chemistry, { domain: ['equilibrium'] })
+  assert.deepEqual(groups.find((group) => group.id === 'skill').options.map((option) => option.id), [
+    'introduction-equilibrium',
+    'direction-reversible-reactions',
+    'reaction-quotient-equilibrium-constant',
+    'calculating-equilibrium-constant',
+    'magnitude-equilibrium-constant',
+    'properties-equilibrium-constant',
+    'calculating-equilibrium-concentrations',
+    'representations-equilibrium',
+    'introduction-le-chatelier-principle',
+    'reaction-quotient-le-chatelier-principle',
+    'introduction-solubility-equilibria',
+    'common-ion-effect',
+  ])
+})
+
+test('AP Chemistry direct topic URLs use canonical taxonomy ids', () => {
+  assert.equal(
+    createSkillBrowserUrl('ap-chemistry', 'introduction-equilibrium'),
+    '/topics.html?topic=ap-chemistry&domain=equilibrium&skill=introduction-equilibrium',
+  )
+  assert.equal(
+    createSkillPracticeUrl('ap-chemistry', 'introduction-equilibrium'),
+    '/questions.html?topic=ap-chemistry&domain=equilibrium&skill=introduction-equilibrium',
+  )
+  assert.equal(
+    createSkillChatUrl('ap-chemistry', 'introduction-equilibrium'),
+    '/chat.html?exam=ap&test=ap-chemistry&unit=equilibrium&skill=introduction-equilibrium',
+  )
 })
 
 test('SAT questions carry valid taxonomy, provenance, and context targets', () => {

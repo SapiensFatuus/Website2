@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validImageUpload() {
+      return request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp'];
+    }
+
+    match /tutor-uploads/{uid}/{fileName} {
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && fileName.matches('[0-9a-fA-F-]{36}\\.(jpg|jpeg|png|webp)')
+        && validImageUpload();
+      allow read, update, delete: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,3 +1,5 @@
+import { apChemistryTutorDomains } from './apChemistryTutorProjection.js'
+
 const satMathDomains = [
   {
     id: 'algebra',
@@ -49,17 +51,6 @@ const satMathDomains = [
   },
 ]
 
-const apChemistryDomains = [
-  ['atomic-structure', 'Atomic Structure and Properties', ['atom', 'atomic structure', 'electron', 'periodic', 'mole', 'mass spectrum']],
-  ['bonding', 'Molecular and Ionic Compound Structure and Properties', ['bond', 'lewis', 'molecular geometry', 'ionic', 'covalent', 'intermolecular']],
-  ['reactions', 'Chemical Reactions', ['reaction', 'stoichiometry', 'titration', 'net ionic', 'precipitation', 'redox']],
-  ['kinetics', 'Kinetics', ['kinetics', 'reaction rate', 'rate law', 'activation energy', 'mechanism']],
-  ['thermodynamics', 'Thermodynamics', ['thermodynamics', 'enthalpy', 'entropy', 'gibbs', 'calorimetry', 'heat']],
-  ['equilibrium', 'Equilibrium', ['equilibrium', 'le chatelier', 'equilibrium constant', 'reaction quotient', 'ksp']],
-  ['acids-bases', 'Acids and Bases', ['acid', 'base', 'ph', 'pka', 'buffer', 'neutralization']],
-  ['applications', 'Applications of Thermodynamics', ['electrochemistry', 'galvanic', 'electrolytic', 'free energy', 'cell potential']],
-].map(([id, label, keywords]) => ({ id, label, keywords, skills: [] }))
-
 export const tutorSubjects = Object.freeze({
   'sat:sat-math': Object.freeze({
     examId: 'sat',
@@ -75,7 +66,47 @@ export const tutorSubjects = Object.freeze({
     subjectId: 'ap-chemistry',
     label: 'AP Chemistry',
     keywords: ['ap chemistry', 'ap chem', 'multiple choice', 'free response', 'frq', 'laboratory'],
-    domains: apChemistryDomains,
+    domains: apChemistryTutorDomains,
+  }),
+  'sat:sat-reading-writing': Object.freeze({
+    examId: 'sat', examLabel: 'SAT', subjectId: 'sat-reading-writing', label: 'SAT Reading & Writing', general: true,
+    summary: 'Reading comprehension, grammar, and revision skills through short passages and focused multiple-choice questions.',
+    keywords: ['sat reading', 'sat writing', 'grammar', 'reading comprehension'], domains: [],
+  }),
+  'ap:ap-lang-comp': Object.freeze({
+    examId: 'ap', examLabel: 'AP', subjectId: 'ap-lang-comp', label: 'AP Lang & Composition', general: true,
+    summary: 'Rhetorical analysis, synthesis, argument writing, and reading comprehension.',
+    keywords: ['ap language', 'rhetorical analysis', 'synthesis', 'argument'], domains: [],
+  }),
+  'ap:ap-us-history': Object.freeze({
+    examId: 'ap', examLabel: 'AP', subjectId: 'ap-us-history', label: 'AP US History', general: true,
+    summary: 'Historical thinking, document analysis, and argument writing across United States history.',
+    keywords: ['apush', 'us history', 'dbq', 'historical thinking'], domains: [],
+  }),
+  'ap:ap-biology': Object.freeze({
+    examId: 'ap', examLabel: 'AP', subjectId: 'ap-biology', label: 'AP Biology', general: true,
+    summary: 'Molecules, cells, genetics, evolution, ecology, scientific reasoning, and data interpretation.',
+    keywords: ['ap biology', 'cells', 'genetics', 'evolution', 'ecology'], domains: [],
+  }),
+  'ap:ap-calculus': Object.freeze({
+    examId: 'ap', examLabel: 'AP', subjectId: 'ap-calculus', label: 'AP Calculus', general: true,
+    summary: 'Limits, derivatives, integrals, and applications of calculus.',
+    keywords: ['ap calculus', 'limits', 'derivatives', 'integrals'], domains: [],
+  }),
+  'ap:ap-physics': Object.freeze({
+    examId: 'ap', examLabel: 'AP', subjectId: 'ap-physics', label: 'AP Physics', general: true,
+    summary: 'Mechanics, electricity, waves, energy transfer, quantitative problem-solving, and conceptual reasoning.',
+    keywords: ['ap physics', 'mechanics', 'electricity', 'waves', 'energy'], domains: [],
+  }),
+  'ap:ap-government': Object.freeze({
+    examId: 'ap', examLabel: 'AP', subjectId: 'ap-government', label: 'AP Government & Politics', general: true,
+    summary: 'United States political institutions, constitutional principles, public policy, and political behavior.',
+    keywords: ['ap government', 'politics', 'constitution', 'public policy'], domains: [],
+  }),
+  'ap:ap-literature': Object.freeze({
+    examId: 'ap', examLabel: 'AP', subjectId: 'ap-literature', label: 'AP Literature', general: true,
+    summary: 'Close reading, interpretation, and literary analysis through prose, poetry, and essay writing.',
+    keywords: ['ap literature', 'close reading', 'poetry', 'literary analysis'], domains: [],
   }),
 })
 

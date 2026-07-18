@@ -4,7 +4,7 @@ This project is now set up to use Firebase as its primary hosting path, with a s
 
 ## Adaptive AI tutor
 
-SAT Math and AP Chemistry each have one test tutor. Test overview pages open a clean whole-test conversation, while SAT Math unit and skill links generate a focused opening question and submit it automatically.
+Every catalog test has a whole-test tutor. SAT Math and AP Chemistry add specialized test-aware behavior, while other tests use their catalog title and summary for broad explanations, walkthroughs, and study planning. SAT Math unit and skill links generate a focused opening question and submit it automatically.
 
 The tutor adjusts its internal focus automatically as the student moves between units and skills. Students never manage scope or see grounding metadata. Questions outside the selected test still receive a helpful answer with a brief test-boundary note.
 
@@ -15,7 +15,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Open SAT Math or AP Chemistry and choose **Ask the [test] Tutor** for whole-test tutoring. SAT Math also exposes secondary **Teach me this unit** and **Teach me this skill** actions.
+Open any test and choose **Ask the [test] Tutor** for whole-test tutoring. SAT Math also exposes secondary **Teach me this unit** and **Teach me this skill** actions.
 
 ### Configure Vertex AI Gemini and deploy
 
@@ -27,6 +27,7 @@ The tutor uses Vertex AI with the Cloud Function's service account. No Gemini AP
 
    ```bash
    npm install --prefix functions
+   npm run deploy:storage
    npm run deploy:backend
    ```
 
@@ -36,11 +37,17 @@ The tutor uses Vertex AI with the Cloud Function's service account. No Gemini AP
    npm run deploy:hosting
    ```
 
-The exported callable remains `satMathTutor` in `us-central1` for deployment compatibility. Its input accepts a canonical `skill`, `domain`, or `subject` target, a message of at most 1,200 characters, and at most 10 history messages. The backend retains effective-target and classification fields for compatibility, but the chat UI does not expose routing or grounding details.
+The exported `satMathTutor` callable remains in `us-central1` for SAT deployment compatibility. AP Chemistry uses the new `studyTutor` callable, which accepts the same canonical target, message, and history fields plus an optional private Storage attachment path. The backend retains effective-target and classification fields for compatibility; AP Chemistry answers can additionally show the labels of approved original study materials that support the answer.
+
+### AP Chemistry homework-photo analysis
+
+AP Chemistry text tutoring remains available to guests. Homework-photo analysis requires Google sign-in and accepts one JPEG, PNG, or WebP image up to 5 MB. The browser uploads it privately to `tutor-uploads/{uid}/{random-id}`; `studyTutor` validates ownership and metadata, passes the temporary `gs://` reference to Gemini, then deletes the file whether generation succeeds or fails.
+
+Successful photo analyses are limited to 10 per signed-in user per UTC day. Firestore retains only the daily counter and short-lived request reservations, never the image or chat text. The Storage rules deny browser reads, cross-user access, and all paths other than valid private tutor-image uploads.
 
 ### Add another tutor course or grounding pack
 
-Course scope is allow-listed independently in `functions/tutorScopeCatalog.js` and `site/chat/tutorScopes.js`. Add matching canonical course, unit, and skill metadata to both server and client catalogs, then add scope-resolution and URL tests.
+Tutor targets are allow-listed independently in `functions/tutorScopeCatalog.js` and `site/chat/tutorScopes.js`. General tests need matching canonical test metadata in both catalogs. Specialized tests can additionally define unit and skill metadata, followed by scope-resolution and URL tests.
 
 Optional server-only grounding packs live under `functions/tutorContextPacks/` and are registered in `functions/tutorRegistry.js`. They must use original material and globally unique source IDs. Adding a pack enriches answers but does not change tutor availability or require editing the callable flow.
 
@@ -103,7 +110,23 @@ Catalog validation rejects duplicate or unstable IDs, invalid taxonomy reference
 
 Run `npm run catalog:coverage` for deterministic counts by exam, subject, domain, skill, question type, and source kind. It also lists skills with no questions and skills below the default minimum of five. Use `npm run catalog:coverage -- --minimum=10` to choose another positive threshold.
 
-AP Chemistry remains prototype-only content behind `site/questions/legacy/apChemistryAdapter.js`. It is intentionally excluded from the canonical catalog until that subject receives a complete shared taxonomy and migration.
+AP Chemistry now uses the shared canonical taxonomy for its nine current units and 88 CED topics. Its four prototype questions remain isolated behind `site/questions/legacy/apChemistryAdapter.js` until they can be reviewed and replaced; they are not part of the canonical question catalog.
+
+## AP Chemistry framework and sources
+
+The AP Chemistry foundation is versioned as `ap-chemistry-fall-2024`. `site/taxonomy/apChemistryFramework.js` contains the nine-unit framework, topic and learning-objective identifiers, original summaries, weightings, and six science-practice categories. `site/taxonomy/apChemistrySources.js` records the authoritative public sources, usage boundaries, access dates, and annual review dates.
+
+College Board documents are link-only or metadata-only unless a source record explicitly documents redistribution permission. Do not copy secure AP Classroom questions or reproduce released questions, scoring language, diagrams, student responses, or the official reference booklet by default.
+
+Before each school year:
+
+1. Check the AP course and exam change log and confirm the active CED.
+2. Review the current exam page, reference information, and released-FRQ archive.
+3. Update access dates, annual review dates, versions, and notes in the source registry.
+4. If the framework changed, add a new framework version and migrate content deliberately instead of silently changing existing identifiers.
+5. Run `npm run test:site`, `npm run test:functions`, `npm run catalog:validate`, and `npm run catalog:coverage`.
+
+Legacy unit URLs are resolved centrally. `atomic-structure`, `bonding`, `reactions`, and `applications` map to their current unit IDs. The ambiguous legacy `thermodynamics` unit broadens to the AP Chemistry course instead of selecting Unit 6 or Unit 9 incorrectly.
 
 ## Skill catalog search
 
@@ -157,7 +180,7 @@ The client already initializes reCAPTCHA Enterprise App Check when `VITE_RECAPTC
 1. Register the web app with App Check in Firebase Console using reCAPTCHA Enterprise.
 2. Put the public site key in `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` and redeploy Hosting.
 3. Verify valid requests in App Check metrics.
-4. Change `enforceAppCheck` to `true` on `satMathTutor` in `functions/index.js` and redeploy Functions.
+4. `studyTutor` already enforces App Check. Set `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY`, deploy Hosting, then deploy Functions and confirm valid App Check traffic before enabling enforcement on `satMathTutor`.
 
 Enforcement is intentionally `false` during the prototype so mock/local development is not blocked. Vertex AI authentication remains server-side either way.
 

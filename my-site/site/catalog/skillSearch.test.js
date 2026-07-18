@@ -11,15 +11,25 @@ import {
   withSkillSearchQuery,
 } from './skillSearch.js'
 
-test('search index contains all 20 SAT Math skills with canonical targets and URLs', () => {
-  assert.equal(skillSearchIndex.length, 20)
-  assert.ok(skillSearchIndex.every((entry) => (
+test('search index contains every canonical SAT Math and AP Chemistry topic', () => {
+  const satMathEntries = skillSearchIndex.filter((entry) => entry.subjectId === 'sat-math')
+  const chemistryEntries = skillSearchIndex.filter((entry) => entry.subjectId === 'ap-chemistry')
+  assert.equal(skillSearchIndex.length, 108)
+  assert.equal(satMathEntries.length, 20)
+  assert.equal(chemistryEntries.length, 88)
+  assert.ok(satMathEntries.every((entry) => (
     entry.examId === 'sat'
-    && entry.subjectId === 'sat-math'
     && entry.domainId
     && entry.skillId
     && entry.browserUrl.includes(`skill=${entry.skillId}`)
     && entry.practiceUrl.includes(`skill=${entry.skillId}`)
+  )))
+  assert.ok(chemistryEntries.every((entry) => (
+    entry.examId === 'ap'
+    && entry.domainId
+    && entry.skillId
+    && entry.browserUrl.includes('topic=ap-chemistry')
+    && entry.tutorUrl.includes('test=ap-chemistry')
   )))
 })
 

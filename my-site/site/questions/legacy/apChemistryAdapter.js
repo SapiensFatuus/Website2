@@ -51,19 +51,41 @@ const legacyApChemistryQuestions = [
   },
 ]
 
+const canonicalTargets = Object.freeze({
+  'atomic-structure': ['atomic-structure-properties', 'atomic-structure-electron-configuration'],
+  reactions: ['chemical-reactions', 'introduction-reactions'],
+  equilibrium: ['equilibrium', 'introduction-equilibrium'],
+  thermodynamics: ['properties-substances-mixtures', 'solutions-mixtures'],
+})
+
 function slugify(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
 
 function adaptLegacyQuestion(question) {
-  if (question.renderer && question.classifications) return question
+  if (question.renderer && question.classifications) {
+    const materialId = question.classifications.material?.[0]
+    const [domainId, skillId] = canonicalTargets[materialId] || [materialId, null]
+    return {
+      ...question,
+      classifications: {
+        ...question.classifications,
+        domain: [domainId],
+        ...(skillId ? { skill: [skillId] } : {}),
+      },
+    }
+  }
   const { type = 'multiple-choice', material = 'Unknown', responseFormat, ...rest } = question
+  const materialId = slugify(material)
+  const [domainId, skillId] = canonicalTargets[materialId] || [materialId, null]
   return {
     ...rest,
     renderer: type,
     classifications: {
       questionType: [type],
-      material: [slugify(material)],
+      material: [materialId],
+      domain: [domainId],
+      ...(skillId ? { skill: [skillId] } : {}),
       ...(responseFormat ? { responseFormat: [responseFormat] } : {}),
     },
   }

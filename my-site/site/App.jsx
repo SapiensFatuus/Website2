@@ -7,6 +7,7 @@ import { findTopicBySlug, topics } from './siteData'
 import { QuestionPage } from './questions/QuestionPage'
 import { getPracticeFilters } from './taxonomy/contentTaxonomy'
 import { sanitizeSkillSearchQuery } from './catalog/skillSearch'
+import { searchTests } from './catalog/testSearch'
 import { createSubjectTutorUrl } from './chat/tutorScopes'
 
 const ChatPage = lazy(() => import('./chat/ChatPage').then((module) => ({ default: module.ChatPage })))
@@ -157,13 +158,7 @@ function App() {
   }, [currentPageClassName, query])
 
   const results = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-
-    if (!normalizedQuery) {
-      return []
-    }
-
-    return topics.filter((topic) => topic.title.toLowerCase().includes(normalizedQuery))
+    return searchTests(topics, query)
   }, [query])
 
   const selectedTopic = useMemo(() => {
@@ -232,7 +227,7 @@ function App() {
     }
 
     if (method === 'View Topics') {
-      navigateTo(selectedTopic?.slug === 'sat-math' ? '/topics.html?topic=sat-math' : '/index.html')
+      navigateTo(selectedTopic ? `/topics.html?topic=${selectedTopic.slug}` : '/index.html')
       return
     }
 
@@ -245,7 +240,7 @@ function App() {
   }
 
   function handleSkillSearchChange(nextQuery) {
-    const params = new URLSearchParams({ topic: 'sat-math' })
+    const params = new URLSearchParams({ topic: selectedTopic?.slug || 'sat-math' })
     const safeQuery = sanitizeSkillSearchQuery(nextQuery)
     if (safeQuery) params.set('q', safeQuery)
     replaceRoute(`/topics.html?${params.toString()}`)

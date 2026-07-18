@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
-import { GOOGLE_SIGN_IN_UI_ENABLED } from '../auth/authFeatures'
-import { canPersistLearningRecords, getProgressPersistenceLabel } from '../auth/authState'
+import { canPersistLearningRecords } from '../auth/authState'
 import { createPersistenceFingerprint } from '../learning/learningIds.js'
 import { persistLearningRecords } from '../learning/learningFirestore.js'
 import {
@@ -68,8 +67,12 @@ function SetupModal({ topic, initialFilters, savedSession, onResume, onCancel, o
     [topic, settings.filters],
   )
   const matchingQuestions = useMemo(
-    () => getQuestions({ topic: topic.slug, filters: settings.filters }),
-    [topic.slug, settings.filters],
+    () => getQuestions({
+      topic: topic.slug,
+      filters: settings.filters,
+      filterGroups: topic.questionFilters,
+    }),
+    [topic.questionFilters, topic.slug, settings.filters],
   )
 
   useEffect(() => {
@@ -289,10 +292,7 @@ function SetupModal({ topic, initialFilters, savedSession, onResume, onCancel, o
 }
 
 function ResultsView({
-  authStatus,
-  isAuthenticating,
   onRetrySave,
-  onSignIn,
   questions,
   saveState,
   session,
@@ -319,19 +319,16 @@ function ResultsView({
         <p className="question-eyebrow">{topic.title} · {session.config.mode === 'testing' ? 'Test' : 'Practice'} complete</p>
         <h1 className={`score-${scoreBand}`}>{grade.percent}%</h1>
         <p>{grade.total ? `${grade.correct} correct out of ${grade.total}` : 'No graded answers'}</p>
-        <div className={`learning-save-banner ${saveState.status}`}>
-          <p>{saveState.message}</p>
-          {GOOGLE_SIGN_IN_UI_ENABLED && authStatus === 'signed-out' ? (
-            <button type="button" className="question-secondary-button" disabled={isAuthenticating} onClick={onSignIn}>
-              {isAuthenticating ? 'Signing in…' : 'Sign in to save progress'}
-            </button>
-          ) : null}
-          {saveState.status === 'error' ? (
-            <button type="button" className="question-secondary-button" onClick={onRetrySave}>
-              Retry save
-            </button>
-          ) : null}
-        </div>
+        {saveState ? (
+          <div className={`learning-save-banner ${saveState.status}`}>
+            <p>{saveState.message}</p>
+            {saveState.status === 'error' ? (
+              <button type="button" className="question-secondary-button" onClick={onRetrySave}>
+                Retry save
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         <div className="result-stat-grid">
           <div><strong>{grade.correct}</strong><span>Correct</span></div>
           <div><strong>{grade.incorrect}</strong><span>Incorrect</span></div>
@@ -486,7 +483,7 @@ function FlaggedReviewModal({ flaggedCount, onReview, onSubmit, onCancel }) {
 }
 
 export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
-  const { authStatus, isAuthenticating, signIn, user } = useAuth()
+  const { authStatus, user } = useAuth()
   const [savedSession, setSavedSession] = useState(() => topic ? readSavedSession(topic.slug) : null)
   const [session, setSession] = useState(null)
   const [setupOpen, setSetupOpen] = useState(true)
@@ -499,6 +496,7 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
   })
   const [saveAttemptNonce, setSaveAttemptNonce] = useState(0)
   const persistedFingerprintsRef = useRef(new Set())
+  const typedResponseRef = useRef(null)
 
   const questions = useMemo(
     () => session ? getQuestionsByIds(session.questionIds) : [],
@@ -508,39 +506,15 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
   const selectedOptionId = currentQuestion ? session.answers[currentQuestion.id] : null
   const isCurrentSubmitted = currentQuestion ? Boolean(session.submitted[currentQuestion.id]) : false
   const isPractice = session?.config.mode === 'practice'
-  const persistenceMessage = GOOGLE_SIGN_IN_UI_ENABLED || user
-    ? getProgressPersistenceLabel(user, session)
-    : 'Guest progress is stored only on this device.'
   const displaySaveState = useMemo(() => {
-    if (!session || session.status !== 'complete') {
-      return { status: 'idle', message: persistenceMessage }
-    }
-
-    if (authStatus === 'signed-out') {
-      return {
-        status: 'guest',
-        message: GOOGLE_SIGN_IN_UI_ENABLED
-          ? 'This completed session is not saved to an account. Sign in to keep learning history across devices.'
-          : 'This completed session is stored only on this device.',
-      }
-    }
+    if (!session || session.status !== 'complete' || authStatus !== 'signed-in' || !user) return null
 
     if (saveState.status === 'saving' || saveState.status === 'saved' || saveState.status === 'error') {
       return saveState
     }
 
-    if (authStatus === 'loading') {
-      return {
-        status: 'idle',
-        message: 'Checking your account before saving this session…',
-      }
-    }
-
-    return {
-      status: 'idle',
-      message: 'Your completed session is ready to save.',
-    }
-  }, [authStatus, persistenceMessage, saveState, session])
+    return null
+  }, [authStatus, saveState, session, user])
 
   useEffect(() => {
     if (!session || session.status !== 'active') return undefined
@@ -811,14 +785,6 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
   if (setupOpen) {
     return (
       <div className="question-setup-page">
-        <div className="practice-progress-note" role="note">
-          <p>{GOOGLE_SIGN_IN_UI_ENABLED || user ? getProgressPersistenceLabel(user, null) : 'Guest progress is stored only on this device.'}</p>
-          {GOOGLE_SIGN_IN_UI_ENABLED && authStatus === 'signed-out' ? (
-            <button type="button" className="question-secondary-button" disabled={isAuthenticating} onClick={signIn}>
-              {isAuthenticating ? 'Signing in…' : 'Sign in with Google'}
-            </button>
-          ) : null}
-        </div>
         <SetupModal
           topic={topic}
           initialFilters={initialFilters}
@@ -837,14 +803,11 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
         session={session}
         questions={questions}
         topic={topic}
-        authStatus={authStatus}
-        isAuthenticating={isAuthenticating}
         saveState={displaySaveState}
         onNewSession={resetToSetup}
         onRetry={retrySession}
         onExit={() => navigateToTopic(true)}
         onRetrySave={retrySave}
-        onSignIn={signIn}
       />
     )
   }
@@ -886,14 +849,6 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
 
   return (
     <div className="question-session-page">
-      <section className={`practice-progress-note inline ${authStatus}`}>
-        <p>{persistenceMessage}</p>
-        {GOOGLE_SIGN_IN_UI_ENABLED && authStatus === 'signed-out' ? (
-          <button type="button" className="question-secondary-button" disabled={isAuthenticating} onClick={signIn}>
-            {isAuthenticating ? 'Signing in…' : 'Sign in with Google'}
-          </button>
-        ) : null}
-      </section>
       <header className="question-session-header">
         <button type="button" className="question-text-button question-exit" onClick={() => navigateToTopic()}>← Exit</button>
         <div className="session-heading">
@@ -1043,14 +998,19 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
               )
             })}
           </div> : (
-            <div className={`typed-answer ${currentQuestion.renderer}`}>
+            <div
+              className={`typed-answer ${currentQuestion.renderer}`}
+              onClick={() => typedResponseRef.current?.focus()}
+            >
               <label htmlFor="typed-response">{currentQuestion.renderer === 'grid-in' ? 'Your answer' : 'Your response'}</label>
               {currentQuestion.renderer === 'grid-in' ? (
                 <input
                   id="typed-response"
+                  ref={typedResponseRef}
                   type="text"
                   inputMode="decimal"
                   autoComplete="off"
+                  aria-describedby="typed-response-help"
                   value={selectedOptionId || ''}
                   disabled={isPractice && isCurrentSubmitted}
                   onChange={(event) => updateTypedAnswer(event.target.value)}
@@ -1058,13 +1018,15 @@ export function QuestionPage({ topic, initialFilters = {}, onNavigate }) {
               ) : (
                 <textarea
                   id="typed-response"
+                  ref={typedResponseRef}
                   rows="8"
+                  aria-describedby="typed-response-help"
                   value={selectedOptionId || ''}
                   disabled={isPractice && isCurrentSubmitted}
                   onChange={(event) => updateTypedAnswer(event.target.value)}
                 />
               )}
-              <p>{currentQuestion.renderer === 'grid-in' ? 'Exact-match grading ignores spaces at the beginning and end.' : 'Your response will be saved, but it will be marked incorrect in this first version.'}</p>
+              <p id="typed-response-help">{currentQuestion.renderer === 'grid-in' ? 'Exact-match grading ignores spaces at the beginning and end.' : 'Your response will be saved, but it will be marked incorrect in this first version.'}</p>
             </div>
           )}
 

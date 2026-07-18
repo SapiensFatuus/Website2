@@ -49,7 +49,15 @@ export function createMockTutorResponse(request) {
   const message = request.message.trim().toLowerCase()
   const details = getTutorUiScopeDetails(initialTarget)
 
-  if (/photosynthesis|cellular respiration|world war|shakespeare|capital of france/.test(message)) {
+  if (details.subject.general && initialTarget.subjectId === 'ap-biology' && /photosynthesis/.test(message)) {
+    return result({
+      initialTarget,
+      target: initialTarget,
+      answer: `Photosynthesis stores light energy as chemical energy. In the light-dependent reactions, chlorophyll captures light and uses it to produce ATP and NADPH. The Calvin cycle then uses ATP and NADPH to build carbon-based molecules from carbon dioxide. The energy ultimately becomes stored in the chemical bonds of sugars such as glucose.\n\nA helpful way to remember the flow is: light energy -> ATP and NADPH -> sugar bonds. Would you like to compare this with cellular respiration or trace the steps in more detail?`,
+    })
+  }
+
+  if (!details.subject.general && /photosynthesis|cellular respiration|world war|shakespeare|capital of france/.test(message)) {
     return result({
       initialTarget,
       target: initialTarget,
@@ -60,7 +68,11 @@ export function createMockTutorResponse(request) {
   }
 
   if (/entire|whole test|study plan|test strategy|overall review/.test(message)) {
-    const target = initialTarget.subjectId === 'sat-math' ? satTarget('subject') : apTarget('subject')
+    const target = resolveTutorUiTarget({
+      scope: 'subject',
+      examId: initialTarget.examId,
+      subjectId: initialTarget.subjectId,
+    })
     const label = getTutorUiScopeDetails(target).label
     return result({
       initialTarget,
@@ -68,7 +80,9 @@ export function createMockTutorResponse(request) {
       label,
       classification: sameTarget(target, initialTarget) ? 'same-scope' : 'broadened',
       scopeNotice: sameTarget(target, initialTarget) ? '' : `I widened the tutoring scope to the entire ${label}.`,
-      answer: initialTarget.subjectId === 'sat-math'
+      answer: details.subject.general
+        ? `**${label} study plan**\n\n1. Start with a short diagnostic or a mixed set of questions.\n2. Sort mistakes into content gaps, reasoning errors, and timing problems.\n3. Review one weak area at a time, then return to mixed practice.\n4. Explain each corrected answer in your own words.\n5. Add timed practice as the test gets closer.\n\nWhat is your test date, and which part currently feels hardest?`
+        : initialTarget.subjectId === 'sat-math'
         ? '**SAT Math review plan**\n\n1. Take a short mixed diagnostic and tag misses by domain.\n2. Spend most practice time on the two weakest domains.\n3. Alternate untimed skill work with timed mixed sets.\n4. Keep an error log that records the cause of each miss, not just the answer.\n5. Finish with full-module pacing practice.\n\nWhat is your test date and current score range?'
         : '**AP Chemistry review plan**\n\n1. Diagnose strengths across all eight units.\n2. Rebuild weak concepts before adding calculations.\n3. Practice particle-level, symbolic, and macroscopic representations together.\n4. Mix multiple-choice work with written justification and FRQs.\n5. Review errors by misconception, setup, algebra, and units.\n\nWhen is your exam, and which unit currently feels weakest?',
     })
@@ -112,7 +126,22 @@ export function createMockTutorResponse(request) {
     })
   }
 
-  if (initialTarget.subjectId === 'sat-math' && /solve|equation|3x|variable|both sides/.test(message)) {
+  if (initialTarget.subjectId === 'sat-math' && /quadratic|x\^2|x²|factor.*equation/.test(message)) {
+    const target = satTarget('skill', 'advanced-math', 'nonlinear-equations-one-variable')
+    return result({
+      initialTarget,
+      target,
+      label: 'Nonlinear equations in one variable',
+      answer: 'Look for two numbers that multiply to $6$ and add to $-5$. Those numbers are $-2$ and $-3$, so the quadratic factors as:\n\n$$(x-2)(x-3)=0$$\n\nBy the zero-product property, either $x-2=0$ or $x-3=0$. Therefore, $x=2$ or $x=3$. You can check both values in the original equation. Would you like to see how to solve the same equation with the quadratic formula?',
+    })
+  }
+
+  const requestsFocusedLinearEquationHelp = initialTarget.skillId === 'linear-equations-one-variable'
+    && /teach me|explain|review|practice/.test(message)
+  if (
+    initialTarget.subjectId === 'sat-math'
+    && (/\blinear equations?\b|3x|both sides/.test(message) || requestsFocusedLinearEquationHelp)
+  ) {
     const target = satTarget('skill', 'algebra', 'linear-equations-one-variable')
     return result({
       initialTarget,
@@ -128,6 +157,17 @@ export function createMockTutorResponse(request) {
       target: initialTarget,
       insufficient: true,
       answer: `I can help with ${details.label}. Are you looking for a concept explanation, help with a specific question, a worked example, or a study plan?`,
+    })
+  }
+
+  if (details.subject.general) {
+    const asksForQuestionHelp = /question|problem|answer choice|work through|solve|passage|essay/.test(message)
+    return result({
+      initialTarget,
+      target: initialTarget,
+      answer: asksForQuestionHelp
+        ? `I can help you work through that for ${details.subject.label}. Share the full question, any answer choices, and what you have tried. I’ll help identify what the question is testing, guide the next step, and explain the reasoning without pretending I have an official test blueprint.`
+        : `I can help with ${details.subject.label} concepts, explanations, strategies, and study planning. Tell me the specific idea you want to understand or the result you are trying to improve, and I’ll make the guidance concrete.`,
     })
   }
 

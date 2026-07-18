@@ -1,7 +1,12 @@
 import { linearEquationsOneVariableContextPack } from './tutorContextPacks/linearEquationsOneVariable.js'
 import { linearFunctionsContextPack } from './tutorContextPacks/linearFunctions.js'
+import { apChemistryEquilibriumContextPacks } from './tutorContextPacks/apChemistryEquilibrium.js'
 
-const contextPacks = [linearEquationsOneVariableContextPack, linearFunctionsContextPack]
+const contextPacks = [
+  linearEquationsOneVariableContextPack,
+  linearFunctionsContextPack,
+  ...apChemistryEquilibriumContextPacks,
+]
 
 export function createTutorTargetKey({ examId, subjectId, domainId, skillId } = {}) {
   return [examId, subjectId, domainId, skillId].join(':')

@@ -4,7 +4,9 @@ import rehypeKatex from 'rehype-katex'
 import remarkMath from 'remark-math'
 import 'katex/dist/katex.min.css'
 import { getChatErrorMessage, requestTutorReply } from './chatClient'
+import { uploadTutorImage, validateTutorImage } from './chatAttachments'
 import { chatReducer, initialChatState } from './chatState'
+import { useAuth } from '../auth/AuthContext'
 import {
   createInitialTutorPrompt,
   createOpeningPromptKey,
@@ -25,24 +27,32 @@ function MathMessage({ children }) {
 }
 
 export function ChatPage({ examId, subjectId, scope, domainId, skillId, returnTo, onNavigate }) {
+  const { authStatus, isAuthenticating, signIn, user } = useAuth()
   const routeTarget = resolveTutorUiTarget({ examId, subjectId, scope, domainId, skillId })
   const routeDetails = getTutorUiScopeDetails(routeTarget)
   const openingPrompt = createInitialTutorPrompt(routeTarget)
   const openingPromptKey = createOpeningPromptKey(routeTarget)
   const [state, dispatch] = useReducer(chatReducer, initialChatState)
   const [draft, setDraft] = useState('')
+  const [attachment, setAttachment] = useState(null)
+  const [attachmentError, setAttachmentError] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
   const [activeTarget, setActiveTarget] = useState(routeTarget)
   const submittedOpeningPrompts = useRef(new Set())
   const inputRef = useRef(null)
+  const attachmentInputRef = useRef(null)
 
   async function runRequest(request, isRetry = false) {
-    dispatch({ type: isRetry ? 'retry' : 'send', request })
+    // The server deletes uploaded images after every attempt, so photo
+    // requests cannot safely be replayed from the chat history.
+    const retryRequest = request.attachment ? null : request
+    dispatch({ type: isRetry ? 'retry' : 'send', request: retryRequest || request })
     try {
       const response = await requestTutorReply(request)
       if (response.effectiveTarget) setActiveTarget(response.effectiveTarget)
       dispatch({ type: 'success', response })
     } catch (error) {
-      dispatch({ type: 'error', error: getChatErrorMessage(error) })
+      dispatch({ type: 'error', error: getChatErrorMessage(error), retryable: Boolean(retryRequest) })
     }
   }
 
@@ -50,6 +60,10 @@ export function ChatPage({ examId, subjectId, scope, domainId, skillId, returnTo
     if (!openingPrompt || !claimOpeningPrompt(submittedOpeningPrompts.current, openingPromptKey)) return
     void runRequest({ target: routeTarget, message: openingPrompt, history: [] })
   }, [openingPrompt, openingPromptKey, routeTarget])
+
+  useEffect(() => () => {
+    if (attachment?.previewUrl) URL.revokeObjectURL(attachment.previewUrl)
+  }, [attachment])
 
   if (!routeTarget || !routeDetails) {
     return (
@@ -61,20 +75,57 @@ export function ChatPage({ examId, subjectId, scope, domainId, skillId, returnTo
     )
   }
 
-  function submit(event) {
+  function clearAttachment() {
+    setAttachment(null)
+    setAttachmentError('')
+    if (attachmentInputRef.current) attachmentInputRef.current.value = ''
+  }
+
+  function selectAttachment(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (authStatus !== 'signed-in' || !user) {
+      setAttachmentError('Sign in with Google to attach a homework photo.')
+      event.target.value = ''
+      return
+    }
+    const error = validateTutorImage(file)
+    if (error) {
+      setAttachmentError(error)
+      event.target.value = ''
+      return
+    }
+    setAttachmentError('')
+    setAttachment({ file, previewUrl: URL.createObjectURL(file) })
+  }
+
+  async function submit(event) {
     event.preventDefault()
     const message = draft.trim()
-    if (!message || state.status === 'loading') return
+    if (!message || state.status === 'loading' || isUploading) return
     const history = state.messages.slice(-10).map(({ role, content }) => ({ role, content }))
     setDraft('')
-    void runRequest({ target: activeTarget || routeTarget, message, history })
+    let attachmentPath
+    try {
+      if (attachment) {
+        setIsUploading(true)
+        attachmentPath = await uploadTutorImage(attachment.file, user?.uid)
+      }
+      await runRequest({ target: activeTarget || routeTarget, message, history, ...(attachmentPath ? { attachment: { storagePath: attachmentPath } } : {}) })
+      if (attachmentPath) clearAttachment()
+    } catch (error) {
+      setDraft(message)
+      setAttachmentError(error.message || 'Your photo could not be uploaded. Try again.')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   function retry() {
     if (state.retryRequest) void runRequest(state.retryRequest, true)
   }
 
-  const backUrl = subjectId === 'sat-math' && (routeTarget.domainId || returnTo === 'units')
+  const backUrl = routeTarget.domainId || returnTo === 'units'
     ? `/topics.html?topic=${subjectId}${routeTarget.domainId ? `&domain=${routeTarget.domainId}` : ''}${routeTarget.skillId ? `&skill=${routeTarget.skillId}` : ''}`
     : `/topic.html?topic=${subjectId}`
 
@@ -99,6 +150,11 @@ export function ChatPage({ examId, subjectId, scope, domainId, skillId, returnTo
               {message.role === 'assistant'
                 ? <MathMessage>{message.content}</MathMessage>
                 : <p>{message.content}</p>}
+              {message.role === 'assistant' && message.sources?.length ? (
+                <ul className="chat-sources" aria-label="Supporting study materials">
+                  {message.sources.map((source) => <li key={source.id}>{source.label}</li>)}
+                </ul>
+              ) : null}
             </article>
           ))}
           {state.status === 'loading' ? (
@@ -124,9 +180,39 @@ export function ChatPage({ examId, subjectId, scope, domainId, skillId, returnTo
             disabled={state.status === 'loading'}
             onChange={(event) => setDraft(event.target.value)}
           />
+          <div className="chat-attachment-row">
+            <input
+              ref={attachmentInputRef}
+              id="chat-attachment"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              onChange={selectAttachment}
+            />
+            <button type="button" className="chat-attachment-button" disabled={state.status === 'loading' || isUploading} onClick={() => attachmentInputRef.current?.click()}>
+              Attach homework photo
+            </button>
+            {attachment ? (
+              <div className="chat-attachment-preview">
+                <img src={attachment.previewUrl} alt="Homework photo ready to send" />
+                <span>{attachment.file.name}</span>
+                <button type="button" onClick={clearAttachment}>Remove</button>
+              </div>
+            ) : null}
+            {attachmentError ? (
+              <p className="chat-attachment-error" role="alert">
+                {attachmentError}
+                {authStatus !== 'signed-in' ? (
+                  <button type="button" disabled={isAuthenticating} onClick={signIn}>
+                    {isAuthenticating ? 'Signing in…' : 'Sign in with Google'}
+                  </button>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
           <div>
-            <span>{draft.length}/1200</span>
-            <button type="submit" disabled={!draft.trim() || state.status === 'loading'}>Send</button>
+            <span>{isUploading ? 'Uploading photo…' : `${draft.length}/1200`}</span>
+            <button type="submit" disabled={!draft.trim() || state.status === 'loading' || isUploading}>Send</button>
           </div>
         </form>
       </section>
