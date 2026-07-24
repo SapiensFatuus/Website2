@@ -1,3 +1,5 @@
+import { clientEnvironment } from './environment.js'
+
 const VISITOR_STORAGE_KEY = 'studyAiVisitorId'
 const VISIT_SESSION_KEY = 'studyAiVisitRecorded'
 const API_BASE_PATH = '/api'
@@ -90,6 +92,17 @@ export function getTrackerStats() {
 }
 
 export function startTracker(onUpdate, onError) {
+  if (clientEnvironment.trackerMode === 'mock') {
+    queueMicrotask(() => onUpdate({
+      activeUsers: 0,
+      peakActiveUsers: 0,
+      totalUsers: 0,
+      totalVisits: 0,
+      timeoutSeconds: ACTIVE_USER_TIMEOUT_MS / 1000,
+    }))
+    return () => {}
+  }
+
   const visitorId = getOrCreateVisitorId()
   let disposed = false
 

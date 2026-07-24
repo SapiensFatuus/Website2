@@ -8,32 +8,14 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
 } from 'firebase/auth'
-import { auth } from '../firebase'
+import { auth } from '../firebaseAuth.js'
+import { getAuthErrorMessage } from './authErrors'
 import { getAuthStatus } from './authState'
 
 const AuthContext = createContext(null)
 
 const googleProvider = new GoogleAuthProvider()
 googleProvider.setCustomParameters({ prompt: 'select_account' })
-
-function getAuthErrorMessage(error) {
-  if (!error?.code) {
-    return 'Sign-in did not finish. Please try again.'
-  }
-
-  if (
-    error.code === 'auth/popup-closed-by-user'
-    || error.code === 'auth/cancelled-popup-request'
-  ) {
-    return 'Sign-in was canceled.'
-  }
-
-  if (error.code === 'auth/popup-blocked') {
-    return 'Your browser blocked the sign-in popup. Allow popups and try again.'
-  }
-
-  return 'Sign-in did not finish. Please try again.'
-}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)

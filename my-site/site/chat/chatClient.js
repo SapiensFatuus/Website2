@@ -1,17 +1,19 @@
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions'
-import { app } from '../firebase.js'
+import { app } from '../firebaseApp.js'
+import { clientEnvironment } from '../environment.js'
 import { createMockTutorResponse } from './mockTutor.js'
 
-export const CHAT_MODE = import.meta.env.VITE_CHAT_MODE === 'firebase' ? 'firebase' : 'mock'
+export const CHAT_MODE = clientEnvironment.chatMode
 const callableTutors = new Map()
+const functionsClient = getFunctions(app, 'us-central1')
+
+if (clientEnvironment.useFunctionsEmulator) {
+  connectFunctionsEmulator(functionsClient, '127.0.0.1', 5001)
+}
 
 function getTutorCallable(name) {
   if (callableTutors.has(name)) return callableTutors.get(name)
-  const functions = getFunctions(app, 'us-central1')
-  if (import.meta.env.VITE_USE_FUNCTIONS_EMULATOR === 'true') {
-    connectFunctionsEmulator(functions, '127.0.0.1', 5001)
-  }
-  const callableTutor = httpsCallable(functions, name, { timeout: 60_000 })
+  const callableTutor = httpsCallable(functionsClient, name, { timeout: 60_000 })
   callableTutors.set(name, callableTutor)
   return callableTutor
 }
@@ -19,7 +21,15 @@ function getTutorCallable(name) {
 export async function requestTutorReply(request) {
   if (CHAT_MODE === 'mock') {
     await new Promise((resolve) => window.setTimeout(resolve, 450))
-    return { ...createMockTutorResponse(request), mode: 'mock' }
+    const response = createMockTutorResponse(request)
+    if (request.mockAttachment) {
+      return {
+        ...response,
+        answer: `Local photo preview is working, but mock mode did not upload or analyze ${request.mockAttachment.name}. Start the Firebase emulators or use the deployed tutor for real image analysis.\n\n${response.answer}`,
+        mode: 'mock',
+      }
+    }
+    return { ...response, mode: 'mock' }
   }
 
   const callableName = request.target?.subjectId === 'ap-chemistry' ? 'studyTutor' : 'satMathTutor'

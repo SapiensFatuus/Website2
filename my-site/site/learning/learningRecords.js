@@ -40,8 +40,8 @@ export function buildAttemptRecord({ uid, session, question, detail, completedAt
   validateIdentifier('question.taxonomy.domainId', question?.taxonomy?.domainId)
   validateIdentifier('question.taxonomy.skillId', question?.taxonomy?.skillId)
 
-  if (!detail || detail.isSkipped || detail.isUnanswered || !detail.isSubmitted) {
-    throw new Error('Only submitted, answered attempts can be recorded.')
+  if (!detail || detail.isSkipped || detail.isUnanswered || detail.isUngraded || !detail.isSubmitted) {
+    throw new Error('Only submitted, answered, automatically graded attempts can be recorded.')
   }
 
   return {
@@ -75,7 +75,7 @@ export function calculateSessionSummary({ session, questions }) {
   const attemptRecords = grade.details
     .map((detail) => {
       const question = questionsById.get(detail.questionId)
-      if (!question || detail.isSkipped || detail.isUnanswered || !detail.isSubmitted) {
+      if (!question || detail.isSkipped || detail.isUnanswered || detail.isUngraded || !detail.isSubmitted) {
         return null
       }
 

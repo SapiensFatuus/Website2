@@ -1,9 +1,36 @@
 import { assertValidQuestionCatalog } from './questionSchema.js'
-import { satMathQuestions } from './satMathQuestions.js'
+import { apChemistryEquilibriumQuestions } from './apChemistryEquilibriumQuestions.js'
+import { apChemistryAcidsBasesQuestions } from './apChemistryAcidsBasesQuestions.js'
+import { apChemistryPropertiesMixturesQuestions } from './apChemistryPropertiesMixturesQuestions.js'
+import { apChemistryChemicalReactionsQuestions } from './apChemistryChemicalReactionsQuestions.js'
+import { apChemistryKineticsQuestions } from './apChemistryKineticsQuestions.js'
+import { apChemistryThermochemistryQuestions } from './apChemistryThermochemistryQuestions.js'
+import { apChemistryThermodynamicsElectrochemistryQuestions } from './apChemistryThermodynamicsElectrochemistryQuestions.js'
+import { apChemistryAtomicStructurePropertiesQuestions } from './apChemistryAtomicStructurePropertiesQuestions.js'
+import { apChemistryCompoundStructurePropertiesQuestions } from './apChemistryCompoundStructurePropertiesQuestions.js'
+import { publishedQuestions } from './publishedQuestions.js'
+import { getEditorialResource } from '../../content/resourceCatalog.js'
+import { createResourceUrl } from '../../content/resourceRoutes.js'
+export { getPublishedQuestionCount } from './publishedQuestionCounts.js'
 
-export const canonicalQuestions = Object.freeze(assertValidQuestionCatalog([...satMathQuestions]))
+export const canonicalQuestions = Object.freeze(assertValidQuestionCatalog([
+  ...publishedQuestions,
+  ...apChemistryEquilibriumQuestions,
+  ...apChemistryAcidsBasesQuestions,
+  ...apChemistryPropertiesMixturesQuestions,
+  ...apChemistryChemicalReactionsQuestions,
+  ...apChemistryKineticsQuestions,
+  ...apChemistryThermochemistryQuestions,
+  ...apChemistryThermodynamicsElectrochemistryQuestions,
+  ...apChemistryAtomicStructurePropertiesQuestions,
+  ...apChemistryCompoundStructurePropertiesQuestions,
+]))
 
 export function toPracticeQuestion(question) {
+  const formulaReferences = (question.referenceRequirements?.formulaIds || [])
+    .map((id) => getEditorialResource(id, { includeDrafts: true }))
+    .filter(Boolean)
+    .map((formula) => ({ id: formula.id, title: formula.title, url: createResourceUrl(formula) }))
   const practiceQuestion = {
     id: question.id,
     topic: question.taxonomy.subjectId,
@@ -18,7 +45,20 @@ export function toPracticeQuestion(question) {
       questionType: [question.taxonomy.questionTypeId],
       domain: [question.taxonomy.domainId],
       skill: [question.taxonomy.skillId],
+      ...(question.responseFormat ? { responseFormat: [question.responseFormat] } : {}),
     },
+    difficulty: question.difficulty,
+    hints: question.hints || [],
+    misconceptionIds: question.misconceptionIds || [],
+    referenceRequirements: question.referenceRequirements,
+    formulaReferences,
+    responseFormat: question.responseFormat,
+    stimulusId: question.stimulusId,
+    rubricId: question.rubricId,
+    modelAnswer: question.answer.modelAnswer,
+    parts: question.parts || [],
+    stimulus: question.stimulusId ? getEditorialResource(question.stimulusId, { includeDrafts: true }) : null,
+    rubric: question.rubricId ? getEditorialResource(question.rubricId, { includeDrafts: true }) : null,
   }
 
   if (question.answer.kind === 'selected-response') {
@@ -38,13 +78,6 @@ export const canonicalPracticeQuestions = Object.freeze(canonicalQuestions
   .filter((question) => question.content.status === 'published')
   .map(toPracticeQuestion))
 
-const publishedQuestionCounts = canonicalQuestions.reduce((counts, question) => {
-  if (question.content.status !== 'published') return counts
-  const key = `${question.taxonomy.examId}:${question.taxonomy.subjectId}:${question.taxonomy.domainId}:${question.taxonomy.skillId}`
-  counts.set(key, (counts.get(key) || 0) + 1)
-  return counts
-}, new Map())
-
-export function getPublishedQuestionCount({ examId, subjectId, domainId, skillId }) {
-  return publishedQuestionCounts.get(`${examId}:${subjectId}:${domainId}:${skillId}`) || 0
-}
+export const draftCanonicalPracticeQuestions = Object.freeze(canonicalQuestions
+  .filter((question) => question.content.status === 'draft')
+  .map(toPracticeQuestion))

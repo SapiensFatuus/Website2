@@ -1,0 +1,123 @@
+const baseTarget = Object.freeze({ examId: 'ap', subjectId: 'ap-chemistry', domainId: 'properties-substances-mixtures' })
+
+function pack(skillId, label, skillKeywords, material) {
+  return Object.freeze({
+    target: Object.freeze({ ...baseTarget, skillId }),
+    label,
+    reviewStatus: 'draft',
+    materialNotice: 'These are original editorial AP Chemistry teaching materials. They summarize chemistry concepts without copying College Board questions, scoring guides, or reference-sheet layout.',
+    relevanceRules: Object.freeze({
+      skillKeywords,
+      followUpPrefixes: ['why', 'how', 'what if', 'can you explain', 'i do not understand'],
+      followUpTerms: ['that step', 'this step', 'the calculation', 'the particle model', 'the graph'],
+    }),
+    materials: Object.freeze([Object.freeze(material)]),
+  })
+}
+
+export const apChemistryPropertiesMixturesContextPacks = Object.freeze([
+  pack('intermolecular-interparticle-forces', 'Intermolecular and interparticle forces', ['intermolecular', 'dispersion', 'dipole', 'hydrogen bond', 'polarizability'], {
+    id: 'ap-chem-properties-mixtures-forces-original-1',
+    label: 'Identify particles before comparing attractions',
+    keywords: ['intermolecular force', 'dispersion', 'dipole dipole', 'hydrogen bonding', 'polarizability', 'boiling point'],
+    problem: 'A student needs to explain a physical-property difference from particle identity, molecular structure, and attractions.',
+    explanation: 'First decide whether the sample contains molecules, ions, a covalent network, or metal particles. For molecules, every sample has dispersion attractions; polarity can add dipole-dipole attraction, and an H bonded to N, O, or F can support hydrogen bonding with a suitable partner. Size, polarizability, and contact shape affect total dispersion attraction. Compare like structures and state which attraction requires more energy to overcome.',
+    alternativeMethod: 'Make a two-column comparison: particle features on the left and the resulting attraction evidence on the right. This prevents a property trend from being asserted without a particle-level cause.',
+  }),
+  pack('properties-solids', 'Properties of solids', ['ionic solid', 'molecular solid', 'metallic solid', 'network solid', 'conductivity'], {
+    id: 'ap-chem-properties-mixtures-solids-original-1',
+    label: 'Use mobile particles to explain solid evidence',
+    keywords: ['solid type', 'conductivity', 'brittle', 'malleable', 'ionic lattice', 'covalent network', 'metal'],
+    problem: 'A student must identify a solid type from melting, conductivity, hardness, or mechanical evidence.',
+    explanation: 'Match the evidence to a particle model. Ionic solids contain fixed ions and conduct only when ions can move. Metals have mobile electrons and commonly conduct as solids. Molecular solids consist of discrete molecules held by intermolecular attractions. Covalent-network solids connect atoms through an extended bond network and are often hard with high melting behavior. Explain each observation using particle mobility and interaction structure.',
+    alternativeMethod: 'For every observation, ask two questions: what are the repeating particles, and which particles or electrons can move?',
+  }),
+  pack('solids-liquids-gases', 'Solids, liquids, and gases', ['phase', 'solid liquid gas', 'particle diagram', 'phase change'], {
+    id: 'ap-chem-properties-mixtures-phases-original-1',
+    label: 'Preserve particle identity across phase changes',
+    keywords: ['phase change', 'particle spacing', 'particle motion', 'solid', 'liquid', 'gas', 'boiling'],
+    problem: 'A student interprets or draws particle representations for different phases.',
+    explanation: 'A phase change changes spacing, motion, and the influence of interparticle attractions without changing molecular identity. Solid particles keep persistent neighbors while vibrating, liquid particles stay close but rearrange, and gas particles are widely separated and travel throughout the container. A valid diagram preserves atom counts and chemical formulas.',
+    alternativeMethod: 'Annotate a diagram with three checks: same particle identity, conserved atom count, and phase-appropriate spacing and motion.',
+  }),
+  pack('ideal-gas-law', 'Ideal gas law', ['ideal gas', 'pv nrt', 'gas volume', 'partial pressure'], {
+    id: 'ap-chem-properties-mixtures-ideal-gas-original-1',
+    label: 'Choose a gas relationship from the system boundary',
+    keywords: ['PV nRT', 'gas law', 'pressure volume temperature', 'moles gas', 'partial pressure', 'kelvin'],
+    problem: 'A student needs to calculate a gas-state variable or separate a component pressure from total pressure.',
+    explanation: 'Use absolute temperature and consistent units. PV = nRT connects one state to amount; a two-state relationship applies only when the same sealed sample keeps a fixed n. For a gas mixture, total pressure is the sum of partial pressures, and an ideal component has PA = XA Ptotal. State what gas sample each pressure describes before substitution.',
+    alternativeMethod: 'Write a units row under P, V, n, R, and T. Then mark whether n is fixed and whether the measured pressure belongs to one gas or a mixture.',
+  }),
+  pack('kinetic-molecular-theory', 'Kinetic molecular theory', ['kinetic molecular', 'gas speed', 'kinetic energy', 'collisions'], {
+    id: 'ap-chem-properties-mixtures-kmt-original-1',
+    label: 'Separate temperature, kinetic energy, and speed',
+    keywords: ['kinetic molecular theory', 'average kinetic energy', 'molecular speed', 'molar mass', 'collision', 'pressure'],
+    problem: 'A student compares two gases and confuses particle mass, speed, and average kinetic energy.',
+    explanation: 'At the same absolute temperature, gases have the same average translational kinetic energy. Because KE depends on mass and speed, a lighter particle must have a greater characteristic speed for the same average energy. Pressure arises from momentum transfer during wall collisions, so changes in temperature, amount, or volume alter collision behavior.',
+    alternativeMethod: 'State the energy comparison first from temperature, then use particle mass to infer the speed comparison.',
+  }),
+  pack('deviation-ideal-gas-law', 'Deviation from ideal gas behavior', ['nonideal gas', 'real gas', 'attractive forces', 'particle volume'], {
+    id: 'ap-chem-properties-mixtures-nonideal-original-1',
+    label: 'Identify which ideal assumption fails',
+    keywords: ['nonideal', 'real gas', 'high pressure', 'low temperature', 'attraction', 'finite particle volume'],
+    problem: 'A student needs to explain the sign or conditions of a real-gas deviation.',
+    explanation: 'The ideal model neglects attractions and particle volume. Attractions can reduce wall-collision momentum and make measured pressure lower than the ideal prediction. At high pressure, finite particle volume makes the free volume smaller than the container volume and can make repulsive or excluded-volume effects important. Low temperature and strong attractions favor attraction-driven deviations.',
+    alternativeMethod: 'Compare two corrections separately: an attraction correction to collision pressure and a particle-volume correction to available space. Decide which dominates under the stated conditions.',
+  }),
+  pack('solutions-mixtures', 'Solutions and mixtures', ['solution', 'mixture', 'molarity', 'dilution', 'concentration'], {
+    id: 'ap-chem-properties-mixtures-solutions-original-1',
+    label: 'Track the counted solute through volume changes',
+    keywords: ['molarity', 'solution concentration', 'dilution', 'solute moles', 'mixture composition'],
+    problem: 'A student converts among amount, final volume, and concentration or reverses a dilution.',
+    explanation: 'Molarity is moles of the named solute per liter of final solution. A physical dilution conserves the tracked solute amount while increasing volume, so M1V1 = M2V2 only when no reaction, loss, or new source changes that solute. Define whether concentration refers to formula units or a dissolved species after stoichiometric dissociation.',
+    alternativeMethod: 'Calculate solute moles at the start and carry that amount through the process before dividing by the final volume.',
+  }),
+  pack('representations-solutions', 'Representations of solutions', ['particle diagram solution', 'dissociation', 'ion ratio', 'solution representation'], {
+    id: 'ap-chem-properties-mixtures-representations-original-1',
+    label: 'Translate formula stoichiometry into particle counts',
+    keywords: ['particle diagram', 'solution representation', 'dissociation', 'ion ratio', 'charge balance', 'dilution diagram'],
+    problem: 'A student must select or construct a particle diagram for an ionic or molecular solution.',
+    explanation: 'Translate one formula unit into the dissolved particles specified by the model. Fully dissociated MgCl2 requires two chloride ions per magnesium ion, while a molecular nonelectrolyte remains as molecules. Preserve total atoms and net charge. Dilution keeps solute-particle count constant while lowering particle density in the represented volume.',
+    alternativeMethod: 'Build a smallest whole-number particle packet from the formula, then repeat that packet and verify charge balance.',
+  }),
+  pack('separation-solutions-mixtures', 'Separation of solutions and mixtures', ['separation', 'distillation', 'filtration', 'chromatography', 'crystallization'], {
+    id: 'ap-chem-properties-mixtures-separation-original-1',
+    label: 'Justify separation with a property difference',
+    keywords: ['filtration', 'distillation', 'chromatography', 'crystallization', 'separation method', 'volatility'],
+    problem: 'A student must choose a separation method and justify why it works for the stated mixture.',
+    explanation: 'A method is valid only when it exploits a component property difference. Filtration uses particle size and phase, distillation uses volatility, chromatography uses different attractions to stationary and mobile phases, and crystallization uses solubility changes. Name the property, predict which component moves or changes phase, and describe what is collected.',
+    alternativeMethod: 'Complete the sentence: this method separates because component A has more or less of property X than component B.',
+  }),
+  pack('solubility', 'Solubility', ['solubility', 'dissolve', 'like dissolves like', 'solute solvent'], {
+    id: 'ap-chem-properties-mixtures-solubility-original-1',
+    label: 'Compare interactions broken and formed',
+    keywords: ['solubility', 'dissolution', 'solute solvent attraction', 'polarity', 'stirring', 'temperature'],
+    problem: 'A student predicts solubility or confuses dissolution rate with equilibrium solubility.',
+    explanation: 'Dissolution disrupts solute-solute and solvent-solvent attractions and forms solute-solvent attractions. A favorable balance supports mixing. Polarity is a useful guide only when tied to actual particles and interactions. Stirring and smaller pieces usually change the rate of reaching equilibrium, not the equilibrium amount at fixed conditions.',
+    alternativeMethod: 'List the two sets of attractions disrupted and the new attraction formed, then compare rate claims separately from equilibrium claims.',
+  }),
+  pack('spectroscopy-electromagnetic-spectrum', 'Spectroscopy and the electromagnetic spectrum', ['spectroscopy', 'spectrum', 'absorption', 'wavelength', 'frequency'], {
+    id: 'ap-chem-properties-mixtures-spectroscopy-original-1',
+    label: 'Connect a spectrum to allowed energy changes',
+    keywords: ['spectroscopy', 'absorption spectrum', 'emission spectrum', 'electromagnetic radiation', 'energy transition'],
+    problem: 'A student interprets why a sample absorbs or emits selected wavelengths rather than all radiation equally.',
+    explanation: 'Frequency and wavelength locate radiation on the electromagnetic spectrum. Absorption occurs when photon energy matches an allowed increase in sample energy; emission occurs when the sample releases an allowed energy difference. Spectral features therefore connect measured wavelengths to quantized changes, while intensity reflects how much radiation is involved.',
+    alternativeMethod: 'Convert each spectral feature into a photon energy, then relate that energy to the difference between initial and final sample states.',
+  }),
+  pack('properties-photons', 'Properties of photons', ['photon', 'photon energy', 'wavelength frequency', 'planck'], {
+    id: 'ap-chem-properties-mixtures-photons-original-1',
+    label: 'Keep photon energy separate from intensity',
+    keywords: ['E h nu', 'c lambda nu', 'photon energy', 'wavelength', 'frequency', 'intensity'],
+    problem: 'A student converts wavelength to energy or compares beams with different wavelengths and intensities.',
+    explanation: 'Use c = lambda nu and E = h nu = hc/lambda with wavelength in meters. Shorter wavelength means higher frequency and greater energy per photon. At fixed wavelength, increasing intensity increases the number of arriving photons, not the energy of each photon.',
+    alternativeMethod: 'For comparisons, use E1/E2 = lambda2/lambda1 before substituting constants; for one value, convert wavelength units first.',
+  }),
+  pack('beer-lambert-law', 'Beer-Lambert law', ['beer lambert', 'absorbance', 'calibration curve', 'molar absorptivity'], {
+    id: 'ap-chem-properties-mixtures-beer-lambert-original-1',
+    label: 'Build and apply a controlled absorbance calibration',
+    keywords: ['A epsilon b c', 'absorbance', 'calibration line', 'molar absorptivity', 'unknown concentration', 'cuvette'],
+    problem: 'A student uses standards to determine an unknown concentration or evaluates an experimental error.',
+    explanation: 'At fixed wavelength and path length, A = epsilon b c predicts a linear absorbance-concentration relationship over a valid range. Standards define the slope, and the unknown must use the same wavelength, cuvette geometry, and blanking conditions. Account for any dilution after reading the diluted concentration. Residual solvent lowers concentration and absorbance; fingerprints or scattering can raise apparent absorbance.',
+    alternativeMethod: 'Separate the workflow into standard concentrations, calibration slope, diluted-unknown concentration, and reversal of the preparation dilution.',
+  }),
+])

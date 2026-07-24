@@ -214,7 +214,7 @@ test('grid-in grading trims surrounding whitespace and uses exact matching', () 
   assert.equal(grade.details[0].answer.trim(), questions[0].correctAnswer)
 })
 
-test('free-response submissions are temporarily incorrect and blank responses are unanswered', () => {
+test('free-response submissions stay ungraded for self-review and blank responses are unanswered', () => {
   const questions = getQuestions({
     topic: 'ap-chemistry',
     filters: { questionType: ['free-response'], responseFormat: ['essay'] },
@@ -231,8 +231,13 @@ test('free-response submissions are temporarily incorrect and blank responses ar
   const grade = gradeSession(session, questions)
 
   assert.equal(grade.correct, 0)
-  assert.equal(grade.incorrect, 1)
+  assert.equal(grade.incorrect, 0)
   assert.equal(grade.unanswered, 1)
+  assert.equal(grade.ungraded, 1)
+  assert.equal(grade.manualTotal, questions.length)
+  assert.equal(grade.total, 0)
+  assert.equal(grade.details[0].isUngraded, true)
+  assert.equal(grade.details[0].isManualReview, true)
 })
 
 test('completion, duration formatting, and restoration validation handle edge cases', () => {

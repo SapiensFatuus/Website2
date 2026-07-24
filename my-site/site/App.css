@@ -200,7 +200,8 @@
 }
 
 .search-input:focus {
-  outline: none;
+  outline: 3px solid #ffd54f;
+  outline-offset: 3px;
   border-color: #4f4f4f;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
@@ -1071,4 +1072,364 @@
     grid-template-columns: 1fr;
   }
 
+}
+
+.study-resource-page {
+  width: min(920px, calc(100% - 32px));
+  margin-inline: auto;
+}
+
+.study-resource-page > header,
+.study-resource-content,
+.resource-provenance {
+  background: var(--panel, #fff);
+  border: 1px solid rgba(96, 78, 180, 0.2);
+  border-radius: 18px;
+  padding: clamp(18px, 4vw, 32px);
+  margin-block: 18px;
+}
+
+.resource-provenance {
+  border-left: 5px solid #8b6ee8;
+}
+
+.study-resource-content section + section {
+  border-top: 1px solid rgba(96, 78, 180, 0.16);
+  margin-top: 28px;
+  padding-top: 22px;
+}
+
+.resource-table-scroll {
+  overflow-x: auto;
+}
+
+.resource-table-scroll table {
+  border-collapse: collapse;
+  min-width: 620px;
+  width: 100%;
+}
+
+.resource-table-scroll th,
+.resource-table-scroll td {
+  border: 1px solid rgba(96, 78, 180, 0.25);
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.formula-expression,
+.formula-availability,
+.resource-warning,
+.resource-worked-example,
+.misconception-card {
+  background: rgba(139, 110, 232, 0.09);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.formula-expression code {
+  display: block;
+  font-size: clamp(0.9rem, 2vw, 1.08rem);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.study-resource-content details {
+  border: 1px solid rgba(96, 78, 180, 0.2);
+  border-radius: 10px;
+  margin-block: 10px;
+  padding: 12px;
+}
+
+.formula-search-panel {
+  background: var(--panel, #fff);
+  border: 1px solid rgba(96, 78, 180, 0.2);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.formula-search-panel label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.formula-search-panel input,
+.formula-search-panel select {
+  background: var(--panel, #fff);
+  border: 1px solid rgba(96, 78, 180, 0.35);
+  border-radius: 8px;
+  min-height: 44px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  width: min(100%, 520px);
+}
+
+.formula-availability {
+  border-left: 4px solid #6d55bc;
+  margin-block: 16px;
+}
+
+.formula-availability-provided {
+  border-left-color: #16845b;
+}
+
+.formula-availability-not-provided {
+  border-left-color: #9b5d00;
+}
+
+.formula-reference-label {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 5px 9px;
+}
+
+.formula-reference-provided {
+  background: #dff7ec;
+  color: #075d3d;
+}
+
+.formula-reference-partly-provided {
+  background: #eee8ff;
+  color: #4b338e;
+}
+
+.formula-reference-not-provided {
+  background: #fff0d6;
+  color: #754500;
+}
+
+.formula-card-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  margin-block: 20px;
+}
+
+.topic-browser-resource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+}
+
+.progress-page {
+  margin: 0 auto;
+  max-width: 1120px;
+  padding: 48px 24px 72px;
+}
+
+.progress-overview,
+.progress-recommendation {
+  background: #fff;
+  border: 1px solid #d6dce5;
+  border-radius: 14px;
+  margin-block: 20px;
+  padding: 20px;
+}
+
+.progress-topic-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.progress-topic-card {
+  background: #fff;
+  border: 1px solid #d6dce5;
+  border-left: 5px solid #7a7a7a;
+  border-radius: 12px;
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+}
+
+.progress-topic-card p,
+.progress-topic-card h3 {
+  margin: 0;
+}
+
+.progress-topic-card.review { border-left-color: #a53a32; }
+.progress-topic-card.developing,
+.progress-topic-card.early-data { border-left-color: #8a5b00; }
+.progress-topic-card.strong { border-left-color: #18743a; }
+
+.reassessment-readiness {
+  border-left: 5px solid #5c47a8;
+}
+
+.reassessment-readiness small {
+  display: block;
+  margin-top: 14px;
+}
+
+.reassessment-disabled {
+  background: #eceaf4;
+  border-radius: 8px;
+  color: #5f5a70;
+  display: inline-block;
+  font-weight: 700;
+  padding: 10px 12px;
+}
+
+.editorial-review-page {
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 48px 24px 72px;
+}
+
+.editorial-review-header {
+  max-width: 850px;
+}
+
+.editorial-review-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  margin-block: 24px;
+}
+
+.editorial-review-summary div {
+  background: #fff;
+  border: 1px solid #d6dce5;
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+}
+
+.editorial-review-summary strong {
+  font-size: 1.65rem;
+}
+
+.editorial-review-controls {
+  align-items: end;
+  background: #f4f2fb;
+  border: 1px solid #d9d3ed;
+  border-radius: 14px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(240px, 2fr) repeat(2, minmax(160px, 1fr));
+  margin-block: 24px;
+  padding: 18px;
+}
+
+.editorial-review-controls h2 {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.editorial-review-controls label {
+  display: grid;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.editorial-review-controls input,
+.editorial-review-controls select {
+  border: 1px solid #aaa2c5;
+  border-radius: 9px;
+  font: inherit;
+  min-height: 44px;
+  padding: 9px 10px;
+}
+
+.editorial-review-list-heading,
+.editorial-review-card-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.editorial-review-list {
+  display: grid;
+  gap: 16px;
+}
+
+.editorial-review-card {
+  background: #fff;
+  border: 1px solid #d6dce5;
+  border-left: 5px solid #5c47a8;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.editorial-review-card h3 {
+  line-height: 1.4;
+}
+
+.editorial-review-card code {
+  overflow-wrap: anywhere;
+}
+
+.editorial-review-card details {
+  margin-top: 12px;
+}
+
+.editorial-review-card summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.editorial-similarity-warning {
+  background: #fff4d8;
+  border-left: 4px solid #8a5b00;
+  padding: 10px 12px;
+}
+
+@media (max-width: 760px) {
+  .editorial-review-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+.formula-index-card {
+  background: var(--panel, #fff);
+  border: 1px solid rgba(96, 78, 180, 0.2);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.formula-index-card code {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.study-resource-page a:focus-visible,
+.study-resource-page button:focus-visible,
+.study-resource-page input:focus-visible,
+.study-resource-page select:focus-visible,
+.study-resource-page summary:focus-visible {
+  outline: 3px solid #5c47a8;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .topbar,
+  .resource-print-button,
+  .formula-search-panel {
+    display: none !important;
+  }
+
+  .formula-card-grid {
+    display: block;
+  }
+
+  .formula-index-card {
+    break-inside: avoid;
+    margin-bottom: 12px;
+  }
 }

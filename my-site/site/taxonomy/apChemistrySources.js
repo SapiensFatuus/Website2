@@ -42,11 +42,11 @@ export const apChemistrySources = Object.freeze([
     canonicalUrl: 'https://apcentral.collegeboard.org/media/pdf/ap-chemistry-equations-sheet.pdf',
     documentVersion: '2026 exam reference information',
     effectiveDate: '2026',
-    accessDate: '2026-07-18',
+    accessDate: '2026-07-24',
     frameworkId: 'ap-chemistry-fall-2024',
     usageStatus: 'link-only',
     annualReviewDate: '2027-07-01',
-    notes: 'Link to the official reference booklet. Do not mirror or reproduce it without documented permission.',
+    notes: 'Visually reverified on 2026-07-24 for high-level formula-availability metadata and external page links, including the Unit 3 gas, concentration, photon, and absorbance relationships. Link to the official booklet; do not mirror or reproduce its layout or protected presentation without documented permission.',
   },
   {
     id: 'ap-chemistry-released-frqs',

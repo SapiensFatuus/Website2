@@ -28,4 +28,6 @@ test('chat UI identifies the test tutor and keeps only conversational guidance',
   assert.match(chatPage, /Your question/)
   assert.match(chatPage, /Attach homework photo/)
   assert.match(chatPage, /chat-sources/)
+  assert.match(chatPage, /CHAT_MODE === 'firebase'/)
+  assert.match(chatPage, /mockAttachment/)
 })

@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeKatex from 'rehype-katex'
 import remarkMath from 'remark-math'
 import 'katex/dist/katex.min.css'
-import { getChatErrorMessage, requestTutorReply } from './chatClient'
+import { CHAT_MODE, getChatErrorMessage, requestTutorReply } from './chatClient'
 import { uploadTutorImage, validateTutorImage } from './chatAttachments'
 import { chatReducer, initialChatState } from './chatState'
 import { useAuth } from '../auth/AuthContext'
@@ -45,7 +45,7 @@ export function ChatPage({ examId, subjectId, scope, domainId, skillId, returnTo
   async function runRequest(request, isRetry = false) {
     // The server deletes uploaded images after every attempt, so photo
     // requests cannot safely be replayed from the chat history.
-    const retryRequest = request.attachment ? null : request
+    const retryRequest = request.attachment || request.mockAttachment ? null : request
     dispatch({ type: isRetry ? 'retry' : 'send', request: retryRequest || request })
     try {
       const response = await requestTutorReply(request)
@@ -107,12 +107,21 @@ export function ChatPage({ examId, subjectId, scope, domainId, skillId, returnTo
     setDraft('')
     let attachmentPath
     try {
-      if (attachment) {
+      if (attachment && CHAT_MODE === 'firebase') {
         setIsUploading(true)
         attachmentPath = await uploadTutorImage(attachment.file, user?.uid)
       }
-      await runRequest({ target: activeTarget || routeTarget, message, history, ...(attachmentPath ? { attachment: { storagePath: attachmentPath } } : {}) })
-      if (attachmentPath) clearAttachment()
+      const mockAttachment = attachment && CHAT_MODE === 'mock'
+        ? { name: attachment.file.name, type: attachment.file.type, size: attachment.file.size }
+        : null
+      await runRequest({
+        target: activeTarget || routeTarget,
+        message,
+        history,
+        ...(attachmentPath ? { attachment: { storagePath: attachmentPath } } : {}),
+        ...(mockAttachment ? { mockAttachment } : {}),
+      })
+      if (attachment) clearAttachment()
     } catch (error) {
       setDraft(message)
       setAttachmentError(error.message || 'Your photo could not be uploaded. Try again.')

@@ -18,11 +18,21 @@ import {
   getAvailableFilterGroups,
   getDefaultFilterSelections,
   getQuestions,
+  createPracticeQuestionSet,
   isFilterGroupVisible,
   matchesFilters,
   reconcileFilterSelections,
   sanitizeFilterSelections,
 } from './questionData.js'
+import { apChemistryAcidsBasesQuestions } from './catalog/apChemistryAcidsBasesQuestions.js'
+import { apChemistryEquilibriumQuestions } from './catalog/apChemistryEquilibriumQuestions.js'
+import { apChemistryPropertiesMixturesQuestions } from './catalog/apChemistryPropertiesMixturesQuestions.js'
+import { apChemistryChemicalReactionsQuestions } from './catalog/apChemistryChemicalReactionsQuestions.js'
+import { apChemistryKineticsQuestions } from './catalog/apChemistryKineticsQuestions.js'
+import { apChemistryThermochemistryQuestions } from './catalog/apChemistryThermochemistryQuestions.js'
+import { apChemistryThermodynamicsElectrochemistryQuestions } from './catalog/apChemistryThermodynamicsElectrochemistryQuestions.js'
+import { apChemistryAtomicStructurePropertiesQuestions } from './catalog/apChemistryAtomicStructurePropertiesQuestions.js'
+import { apChemistryCompoundStructurePropertiesQuestions } from './catalog/apChemistryCompoundStructurePropertiesQuestions.js'
 
 test('topics define independent filter taxonomies', () => {
   const satMath = findTopicBySlug('sat-math')
@@ -116,6 +126,31 @@ test('multiple-choice and free-response can be mixed in one question pool', () =
   assert.equal(questions.length, 4)
   assert.ok(questions.some((question) => question.classifications.questionType.includes('multiple-choice')))
   assert.ok(questions.some((question) => question.classifications.questionType.includes('free-response')))
+})
+
+test('draft AP Chemistry questions appear only in an explicit editorial question set', () => {
+  const publicSet = createPracticeQuestionSet()
+  const previewSet = createPracticeQuestionSet({ editorialPreview: true })
+  const expectedDraftCount = apChemistryEquilibriumQuestions.length
+    + apChemistryAcidsBasesQuestions.length
+    + apChemistryPropertiesMixturesQuestions.length
+    + apChemistryChemicalReactionsQuestions.length
+    + apChemistryKineticsQuestions.length
+    + apChemistryThermochemistryQuestions.length
+    + apChemistryThermodynamicsElectrochemistryQuestions.length
+    + apChemistryAtomicStructurePropertiesQuestions.length
+    + apChemistryCompoundStructurePropertiesQuestions.length
+  assert.equal(publicSet.some((question) => question.id === 'ap-chem-equilibrium-mcq-001'), false)
+  assert.equal(previewSet.some((question) => question.id === 'ap-chem-equilibrium-mcq-001'), true)
+  assert.equal(previewSet.some((question) => question.id === 'ap-chem-acids-bases-mcq-001'), true)
+  assert.equal(previewSet.some((question) => question.id === 'ap-chem-properties-mixtures-mcq-001'), true)
+  assert.equal(previewSet.some((question) => question.id === 'ap-chem-chemical-reactions-mcq-001'), true)
+  assert.equal(previewSet.some((question) => question.id === 'ap-chem-kinetics-mcq-001'), true)
+  assert.equal(previewSet.some((question) => question.id === 'ap-chem-thermochemistry-mcq-001'), true)
+  assert.equal(previewSet.some((question) => question.id === 'ap-chem-thermodynamics-electrochemistry-mcq-001'), true)
+  assert.equal(previewSet.some((question) => question.id === 'ap-chem-atomic-structure-properties-mcq-001'), true)
+  assert.equal(previewSet.some((question) => question.id === 'ap-chem-compound-structure-properties-mcq-001'), true)
+  assert.equal(previewSet.filter((question) => question.content?.status === 'draft').length, expectedDraftCount)
 })
 
 test('chemistry question types stay selectable and response formats only narrow free responses', () => {

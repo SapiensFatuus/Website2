@@ -188,6 +188,8 @@ export function gradeSession(session, questions) {
     const isSkipped = Boolean(session.skipped?.[questionId])
     const isSubmitted = session.config.mode === 'testing' || Boolean(session.submitted[questionId])
     const hasAnswer = normalizedAnswer !== null && normalizedAnswer !== ''
+    const isManualReview = question?.renderer === 'free-response' || question?.answer?.grading === 'manual'
+    const isUngraded = Boolean(question && hasAnswer && isSubmitted && !isSkipped && isManualReview)
     const isCorrect = Boolean(question && hasAnswer && isSubmitted && !isSkipped && (
       question.renderer === 'grid-in'
         ? normalizedAnswer === String(question.correctAnswer).trim()
@@ -208,22 +210,33 @@ export function gradeSession(session, questions) {
       selectedOptionId: question?.renderer === 'multiple-choice' ? answer : null,
       isSubmitted,
       isCorrect,
+      isManualReview,
+      isUngraded,
       isSkipped,
       isUnanswered: !isSkipped && (!hasAnswer || !isSubmitted),
     }
   })
-  const scoredDetails = details.filter((detail) => !detail.isSkipped)
+  const scoredDetails = details.filter((detail) => !detail.isSkipped && !detail.isManualReview)
   const correct = scoredDetails.filter((detail) => detail.isCorrect).length
-  const unanswered = scoredDetails.filter((detail) => detail.isUnanswered).length
+  const scoredUnanswered = scoredDetails.filter((detail) => detail.isUnanswered).length
+  const unanswered = details.filter((detail) => !detail.isSkipped && detail.isUnanswered).length
   const total = scoredDetails.length
-  const incorrect = total - correct - unanswered
+  const incorrect = total - correct - scoredUnanswered
   const skipped = details.filter((detail) => detail.isSkipped).length
+  const ungraded = details.filter((detail) => detail.isUngraded).length
+  const manualTotal = details.filter((detail) => !detail.isSkipped && detail.isManualReview).length
   const byMaterial = {}
 
   details.forEach((detail) => {
     if (detail.isSkipped) return
     detail.materials.forEach((material) => {
-      byMaterial[material] ||= { total: 0, correct: 0, incorrect: 0, unanswered: 0 }
+      byMaterial[material] ||= { total: 0, correct: 0, incorrect: 0, unanswered: 0, ungraded: 0, manualTotal: 0 }
+      if (detail.isManualReview) {
+        byMaterial[material].manualTotal += 1
+        if (detail.isUngraded) byMaterial[material].ungraded += 1
+        if (detail.isUnanswered) byMaterial[material].unanswered += 1
+        return
+      }
       byMaterial[material].total += 1
       if (detail.isCorrect) byMaterial[material].correct += 1
       else if (detail.isUnanswered) byMaterial[material].unanswered += 1
@@ -237,6 +250,8 @@ export function gradeSession(session, questions) {
     incorrect,
     unanswered,
     skipped,
+    ungraded,
+    manualTotal,
     percent: total ? Math.round((correct / total) * 100) : 0,
     details,
     byMaterial,
@@ -268,7 +283,7 @@ export function getMaterialPercent(result) {
 export function sortReviewQuestions(questions, session, details, sortKey = 'order', direction = 'asc') {
   const originalOrder = new Map(session.questionIds.map((id, index) => [id, index]))
   const detailsById = new Map(details.map((detail) => [detail.questionId, detail]))
-  const statusRank = (detail) => detail?.isCorrect ? 3 : detail?.isUnanswered ? 2 : detail?.isSkipped ? 1 : 0
+  const statusRank = (detail) => detail?.isCorrect ? 4 : detail?.isUngraded ? 3 : detail?.isUnanswered ? 2 : detail?.isSkipped ? 1 : 0
   const multiplier = direction === 'desc' ? -1 : 1
 
   return [...questions].sort((left, right) => {

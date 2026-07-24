@@ -5,6 +5,7 @@ import { onCallGenkit } from 'firebase-functions/https'
 import { logger } from 'firebase-functions'
 import { satMathTutorFlow } from './satMathTutor.js'
 import { StudyTutorError, runStudyTutorRequest } from './studyTutor.js'
+import { getStudyTutorCors } from './functionEnvironment.js'
 
 initializeApp()
 
@@ -194,12 +195,7 @@ export const satMathTutor = onCallGenkit(
 export const studyTutor = onCall(
   {
     enforceAppCheck: true,
-    cors: [
-      'https://website2-c8d1e.web.app',
-      'https://website2-c8d1e.firebaseapp.com',
-      /^http:\/\/127\.0\.0\.1(?::\d+)?$/,
-      /^http:\/\/localhost(?::\d+)?$/,
-    ],
+    cors: getStudyTutorCors(),
     maxInstances: 10,
     timeoutSeconds: 60,
   },

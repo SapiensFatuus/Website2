@@ -19,6 +19,11 @@ export function createCatalogCoverage(questions, { minimumPerSkill = 5 } = {}) {
   const skillCounts = new Map()
   const questionTypeCounts = new Map()
   const sourceKindCounts = new Map()
+  const learningObjectiveCounts = new Map()
+  const sciencePracticeCounts = new Map()
+  const responseFormatCounts = new Map()
+  const difficultyCounts = new Map()
+  const reviewStatusCounts = new Map()
 
   for (const question of questions) {
     const taxonomy = question.taxonomy
@@ -28,6 +33,11 @@ export function createCatalogCoverage(questions, { minimumPerSkill = 5 } = {}) {
     increment(skillCounts, `${taxonomy.examId}:${taxonomy.subjectId}:${taxonomy.domainId}:${taxonomy.skillId}`)
     increment(questionTypeCounts, taxonomy.questionTypeId)
     increment(sourceKindCounts, question.source.kind)
+    taxonomy.learningObjectiveIds?.forEach((id) => increment(learningObjectiveCounts, id))
+    taxonomy.sciencePracticeIds?.forEach((id) => increment(sciencePracticeCounts, id))
+    if (question.responseFormat) increment(responseFormatCounts, question.responseFormat)
+    if (question.difficulty) increment(difficultyCounts, question.difficulty)
+    if (question.content?.status) increment(reviewStatusCounts, question.content.status)
   }
 
   const taxonomySkills = exams.flatMap((exam) => exam.subjects.flatMap((subject) => (
@@ -47,6 +57,11 @@ export function createCatalogCoverage(questions, { minimumPerSkill = 5 } = {}) {
     skills: taxonomySkills,
     questionTypes: sortedCounts(questionTypeCounts),
     sourceKinds: sortedCounts(sourceKindCounts),
+    learningObjectives: sortedCounts(learningObjectiveCounts),
+    sciencePractices: sortedCounts(sciencePracticeCounts),
+    responseFormats: sortedCounts(responseFormatCounts),
+    difficulties: sortedCounts(difficultyCounts),
+    reviewStatuses: sortedCounts(reviewStatusCounts),
     zeroCoverageSkills: taxonomySkills.filter((skill) => skill.count === 0),
     belowMinimumSkills: taxonomySkills.filter((skill) => skill.count < minimumPerSkill),
   }
@@ -80,6 +95,16 @@ export function formatCatalogCoverage(coverage) {
     formatCountSection('By question type', coverage.questionTypes),
     '',
     formatCountSection('By source kind', coverage.sourceKinds),
+    '',
+    formatCountSection('By learning objective', coverage.learningObjectives),
+    '',
+    formatCountSection('By science practice', coverage.sciencePractices),
+    '',
+    formatCountSection('By response format', coverage.responseFormats),
+    '',
+    formatCountSection('By difficulty', coverage.difficulties),
+    '',
+    formatCountSection('By review status', coverage.reviewStatuses),
     '',
     `Skills with zero questions (${coverage.zeroCoverageSkills.length})`,
     zeroCoverage,

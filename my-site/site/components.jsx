@@ -1,6 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './auth/AuthContext'
-import { GOOGLE_SIGN_IN_UI_ENABLED } from './auth/authFeatures'
 import { createDomainTutorUrl } from './chat/tutorScopes'
 import {
   getSkillCatalogEntry,
@@ -13,6 +12,11 @@ import {
   getSubject,
   resolveSubjectLocation,
 } from './taxonomy/contentTaxonomy'
+import { clientEnvironment } from './environment'
+import {
+  createApChemistryAssessmentUrl,
+  getAssessmentBlueprintsForDomain,
+} from './content/apChemistryAssessments'
 
 const TOOLTIP_GAP = 6
 const TOOLTIP_MARGIN = 12
@@ -315,7 +319,7 @@ export function Topbar({ pageClassName, showCounters, stats, onNavigate }) {
             </button>
           </>
         ) : null}
-        {GOOGLE_SIGN_IN_UI_ENABLED && authStatus === 'signed-out' ? (
+        {authStatus === 'signed-out' ? (
           <>
             <div className="account-summary">
               <strong>Guest mode</strong>
@@ -516,6 +520,24 @@ export function TopicPage({ topic, onActionClick, onNavigate }) {
 function SkillCatalogCard({ entry, isSelected, selectedSkillRef, searchQuery, onNavigate }) {
   const browserUrl = withSkillSearchQuery(entry.browserUrl, searchQuery)
   const itemLabel = entry.subjectId === 'ap-chemistry' ? 'topic' : 'skill'
+  const [previewResources, setPreviewResources] = useState([])
+  useEffect(() => {
+    let active = true
+    if (!clientEnvironment.editorialPreview) {
+      return () => { active = false }
+    }
+    Promise.all([
+      import('./content/resourceCatalog.js'),
+      import('./content/resourceRoutes.js'),
+    ]).then(([catalog, routes]) => {
+      if (!active) return
+      const resources = catalog.getEditorialResourcesForSkill(entry.subjectId, entry.skillId, { includeDrafts: true, kinds: ['lesson', 'formula'] })
+      setPreviewResources(resources.map((resource) => ({ ...resource, url: routes.createResourceUrl(resource) })))
+    }).catch(() => {
+      if (active) setPreviewResources([])
+    })
+    return () => { active = false }
+  }, [entry.skillId, entry.subjectId])
   return (
     <article
       className={`skill-card${isSelected ? ' selected' : ''}`}
@@ -534,6 +556,15 @@ function SkillCatalogCard({ entry, isSelected, selectedSkillRef, searchQuery, on
           <summary>Description</summary>
           <p>{entry.skillDescription}</p>
         </details>
+        {previewResources.length ? (
+          <div className="skill-resource-links" aria-label="Draft learning resources">
+            <strong>Editorial preview:</strong>{' '}
+            {previewResources.map((resource, index) => {
+              const url = resource.url
+              return <span key={resource.id}>{index ? ' · ' : ''}<a href={url} onClick={onNavigate(url)}>{resource.title}</a></span>
+            })}
+          </div>
+        ) : null}
       </div>
       <div className="skill-actions">
         {entry.practiceAvailable ? (
@@ -631,12 +662,37 @@ export function TopicBrowserPage({ topic, domainId, skillId, searchQuery = '', o
     window.requestAnimationFrame(() => searchInputRef.current?.focus())
   }
 
+  const selectedApDomain = topic.slug === 'ap-chemistry' ? target.domain : null
+  const formulaCenterUrl = selectedApDomain
+    ? `/formulas.html?test=ap-chemistry&unit=${encodeURIComponent(selectedApDomain.id)}`
+    : null
+  const editorialQueueUrl = selectedApDomain
+    ? `/editorial.html?test=ap-chemistry&unit=${encodeURIComponent(selectedApDomain.id)}`
+    : null
+  const assessmentBlueprints = selectedApDomain && clientEnvironment.editorialPreview
+    ? getAssessmentBlueprintsForDomain(selectedApDomain.id)
+    : []
+  const progressUrl = selectedApDomain && clientEnvironment.editorialPreview
+    ? `/progress.html?test=ap-chemistry&unit=${encodeURIComponent(selectedApDomain.id)}`
+    : null
+
   return (
     <main className="page topic-browser-page">
       <header className="topic-browser-header">
         <p className="topic-browser-eyebrow">{topic.title}</p>
         <h1>{topic.title} units and topics</h1>
         <p>Find a topic or open a unit for focused practice.</p>
+        {selectedApDomain ? (
+          <div className="topic-browser-resource-actions">
+            <a href={formulaCenterUrl} onClick={onNavigate(formulaCenterUrl)}>Open the Unit {selectedApDomain.officialNumber} formula and reference center</a>
+            {assessmentBlueprints.map((blueprint) => {
+              const url = createApChemistryAssessmentUrl(blueprint.id)
+              return <a key={blueprint.id} href={url} onClick={onNavigate(url)}>{blueprint.kind === 'reassessment' ? 'Open' : 'Start'} {blueprint.title.toLowerCase()}</a>
+            })}
+            {progressUrl ? <a href={progressUrl} onClick={onNavigate(progressUrl)}>View Unit {selectedApDomain.officialNumber} progress</a> : null}
+            {clientEnvironment.editorialPreview ? <a href={editorialQueueUrl} onClick={onNavigate(editorialQueueUrl)}>Open the Unit {selectedApDomain.officialNumber} editorial review queue</a> : null}
+          </div>
+        ) : null}
       </header>
 
       <section className="skill-search-panel" aria-labelledby="skill-search-heading">

@@ -103,7 +103,7 @@ export const apChemistryTutorDomains = [
       ['common-ion-effect', 'Common-Ion Effect'],
     ]),
   domain('acids-bases', 'Acids and Bases',
-    ['acid', 'base', 'ph', 'pka', 'buffer', 'neutralization'], [
+    ['acid', 'base', 'ph', 'pka', 'buffer', 'neutralization', 'carbonate', 'hydroxide', 'conjugate acid', 'conjugate base'], [
       ['introduction-acids-bases', 'Introduction to Acids and Bases'],
       ['ph-poh-strong-acids-bases', 'pH and pOH of Strong Acids and Bases'],
       ['weak-acid-base-equilibria', 'Weak Acid and Base Equilibria'],

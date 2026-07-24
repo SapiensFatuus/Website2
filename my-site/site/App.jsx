@@ -4,13 +4,18 @@ import { startTracker } from './firebaseTracker'
 import { trackEvent } from './firebase'
 import { AboutPage, ContactsPage, HomePage, TopicBrowserPage, TopicPage, Topbar } from './components'
 import { findTopicBySlug, topics } from './siteData'
-import { QuestionPage } from './questions/QuestionPage'
 import { getPracticeFilters } from './taxonomy/contentTaxonomy'
 import { sanitizeSkillSearchQuery } from './catalog/skillSearch'
 import { searchTests } from './catalog/testSearch'
 import { createSubjectTutorUrl } from './chat/tutorScopes'
+import { clientEnvironment } from './environment'
+import { getApChemistryAssessmentBlueprint } from './content/apChemistryAssessments.js'
 
 const ChatPage = lazy(() => import('./chat/ChatPage').then((module) => ({ default: module.ChatPage })))
+const QuestionPage = lazy(() => import('./questions/QuestionPage').then((module) => ({ default: module.QuestionPage })))
+const StudyResourcePage = lazy(() => import('./content/StudyResourcePage').then((module) => ({ default: module.StudyResourcePage })))
+const ProgressPage = lazy(() => import('./learning/ProgressPage').then((module) => ({ default: module.ProgressPage })))
+const EditorialReviewPage = lazy(() => import('./content/EditorialReviewPage').then((module) => ({ default: module.EditorialReviewPage })))
 
 function getCurrentLocation() {
   return {
@@ -52,6 +57,22 @@ function getPageClassName(pathname) {
 
   if (normalizedPath.endsWith('/chat.html') || normalizedPath === '/chat.html') {
     return 'page-chat'
+  }
+
+  if (normalizedPath.endsWith('/learn.html') || normalizedPath === '/learn.html') {
+    return 'page-learn'
+  }
+
+  if (normalizedPath.endsWith('/formulas.html') || normalizedPath === '/formulas.html') {
+    return 'page-formulas'
+  }
+
+  if (normalizedPath.endsWith('/progress.html') || normalizedPath === '/progress.html') {
+    return 'page-progress'
+  }
+
+  if (normalizedPath.endsWith('/editorial.html') || normalizedPath === '/editorial.html') {
+    return 'page-editorial'
   }
 
   return 'page-home'
@@ -162,13 +183,28 @@ function App() {
   }, [query])
 
   const selectedTopic = useMemo(() => {
-    if (!['page-topic', 'page-topic-browser', 'page-questions', 'page-chat'].includes(currentPageClassName)) {
+    if (!['page-topic', 'page-topic-browser', 'page-questions', 'page-chat', 'page-learn', 'page-formulas', 'page-progress'].includes(currentPageClassName)) {
       return null
     }
 
     const params = new URLSearchParams(route.search)
     return findTopicBySlug(params.get('test') || params.get('topic'))
   }, [currentPageClassName, route.search])
+
+  const requestedAssessmentId = useMemo(() => {
+    if (currentPageClassName !== 'page-questions') return null
+    const params = new URLSearchParams(route.search)
+    return params.get('assessment') || params.get('diagnostic')
+  }, [currentPageClassName, route.search])
+
+  const assessmentBlueprint = useMemo(() => {
+    if (!clientEnvironment.editorialPreview || !requestedAssessmentId || selectedTopic?.slug !== 'ap-chemistry') return null
+    const params = new URLSearchParams(route.search)
+    const blueprint = getApChemistryAssessmentBlueprint(requestedAssessmentId)
+    const requestedDomain = params.get('domain') || params.get('unit')
+    if (!blueprint || (requestedDomain && requestedDomain !== blueprint.domainId)) return null
+    return blueprint
+  }, [requestedAssessmentId, route.search, selectedTopic?.slug])
 
   function navigateTo(path) {
     window.history.pushState({}, '', path)
@@ -286,15 +322,29 @@ function App() {
         />
       ) : null}
       {currentPageClassName === 'page-questions' ? (
-        <QuestionPage
-          key={route.search}
-          topic={selectedTopic}
-          initialFilters={getPracticeFilters(selectedTopic?.slug, {
-            domainId: new URLSearchParams(route.search).get('domain'),
-            skillId: new URLSearchParams(route.search).get('skill'),
-          })}
-          onNavigate={navigateTo}
-        />
+        requestedAssessmentId && !assessmentBlueprint ? (
+          <main className="question-empty-page">
+            <h1>Assessment unavailable</h1>
+            <p>{clientEnvironment.editorialPreview
+              ? 'That fixed assessment does not match this AP Chemistry unit.'
+              : 'Draft fixed assessments are available only in explicit development editorial preview until chemistry review is complete.'}</p>
+            <a href="/topics.html?topic=ap-chemistry" onClick={createNavigationHandler('/topics.html?topic=ap-chemistry')}>Return to AP Chemistry units</a>
+          </main>
+        ) : <Suspense fallback={<main className="question-empty-page"><p>Loading practice…</p></main>}>
+          <QuestionPage
+            key={route.search}
+            topic={selectedTopic}
+            initialFilters={getPracticeFilters(selectedTopic?.slug, {
+              domainId: new URLSearchParams(route.search).get('domain'),
+              skillId: new URLSearchParams(route.search).get('skill'),
+            })}
+            allowedQuestionIds={assessmentBlueprint?.questionIds || null}
+            sessionLabel={assessmentBlueprint?.title || null}
+            sessionPreset={assessmentBlueprint}
+            resultSummaryKind={assessmentBlueprint?.kind || null}
+            onNavigate={navigateTo}
+          />
+        </Suspense>
       ) : null}
       {currentPageClassName === 'page-chat' ? (
         <Suspense fallback={<main className="chat-empty-page"><p>Loading math tutor…</p></main>}>
@@ -306,6 +356,29 @@ function App() {
             skillId={new URLSearchParams(route.search).get('skill')}
             returnTo={new URLSearchParams(route.search).get('from')}
             onNavigate={navigateTo}
+          />
+        </Suspense>
+      ) : null}
+      {['page-learn', 'page-formulas'].includes(currentPageClassName) ? (
+        <Suspense fallback={<main className="resource-page"><p>Loading study resource…</p></main>}>
+          <StudyResourcePage route={route} onNavigate={createNavigationHandler} />
+        </Suspense>
+      ) : null}
+      {currentPageClassName === 'page-progress' ? (
+        <Suspense fallback={<main className="progress-page"><p>Loading progress…</p></main>}>
+          <ProgressPage
+            subjectId={new URLSearchParams(route.search).get('test') || new URLSearchParams(route.search).get('topic')}
+            domainId={new URLSearchParams(route.search).get('unit') || new URLSearchParams(route.search).get('domain')}
+            onNavigate={createNavigationHandler}
+          />
+        </Suspense>
+      ) : null}
+      {currentPageClassName === 'page-editorial' ? (
+        <Suspense fallback={<main className="editorial-review-page"><p>Loading editorial queue…</p></main>}>
+          <EditorialReviewPage
+            subjectId={new URLSearchParams(route.search).get('test') || new URLSearchParams(route.search).get('topic')}
+            domainId={new URLSearchParams(route.search).get('unit') || new URLSearchParams(route.search).get('domain')}
+            onNavigate={createNavigationHandler}
           />
         </Suspense>
       ) : null}

@@ -10,7 +10,8 @@ import {
 
 export const QUESTION_SCHEMA_VERSION = 1
 export const SOURCE_KINDS = Object.freeze(['official', 'editorial', 'ai-generated', 'third-party'])
-export const CONTENT_STATUSES = Object.freeze(['draft', 'review', 'published', 'archived'])
+export const CONTENT_STATUSES = Object.freeze(['draft', 'in-review', 'approved', 'published', 'retired'])
+export const QUESTION_DIFFICULTIES = Object.freeze(['introductory', 'developing', 'exam-ready'])
 
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const TAG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -97,6 +98,48 @@ function validateContentMetadata(content, errors) {
   if (!Number.isInteger(content.revision) || content.revision < 1) errors.push('content.revision must be a positive integer')
 }
 
+function validateApChemistryEditorialMetadata(question, errors) {
+  const { content } = question
+  if (!QUESTION_DIFFICULTIES.includes(question.difficulty)) errors.push('AP Chemistry questions require a supported difficulty')
+  if (!Array.isArray(question.hints) || !question.hints.length || question.hints.some((hint) => !nonEmptyString(hint))) {
+    errors.push('AP Chemistry questions require non-empty hints')
+  }
+  if (!Array.isArray(question.misconceptionIds) || !question.misconceptionIds.length
+    || question.misconceptionIds.some((id) => !ID_PATTERN.test(id))) {
+    errors.push('AP Chemistry questions require stable misconceptionIds')
+  }
+  const requirements = question.referenceRequirements
+  if (!requirements || !Array.isArray(requirements.formulaIds) || !Array.isArray(requirements.priorKnowledge)
+    || requirements.formulaIds.some((id) => !ID_PATTERN.test(id))
+    || requirements.priorKnowledge.some((id) => !ID_PATTERN.test(id))
+    || new Set(requirements.formulaIds).size !== requirements.formulaIds.length
+    || new Set(requirements.priorKnowledge).size !== requirements.priorKnowledge.length
+    || requirements.formulaIds.length + requirements.priorKnowledge.length === 0) {
+    errors.push('AP Chemistry questions require unique formulaIds or explicit priorKnowledge references')
+  }
+  if (!nonEmptyString(content?.authoredBy) || !/^\d{4}-\d{2}-\d{2}$/.test(content?.updatedAt || '')) {
+    errors.push('AP Chemistry content requires authoredBy and updatedAt')
+  }
+  if (!Array.isArray(content?.reviewers) || content.reviewers.some((reviewer) => !nonEmptyString(reviewer))) {
+    errors.push('AP Chemistry content.reviewers must be an array')
+  } else if (['approved', 'published'].includes(content.status) && content.reviewers.length < 2) {
+    errors.push(`${content.status} AP Chemistry questions require two reviewers`)
+  }
+  if (question.taxonomy.questionTypeId === 'free-response') {
+    if (!['short-frq', 'long-frq'].includes(question.responseFormat)) errors.push('AP Chemistry FRQs require short-frq or long-frq responseFormat')
+    if (!ID_PATTERN.test(question.rubricId || '')) errors.push('AP Chemistry FRQs require a stable rubricId')
+    if (!nonEmptyString(question.answer?.modelAnswer)) errors.push('AP Chemistry FRQs require an original modelAnswer')
+    if (!Array.isArray(question.parts) || !question.parts.length
+      || question.parts.some((part) => !ID_PATTERN.test(part?.id || '') || !nonEmptyString(part?.label) || !nonEmptyString(part?.prompt))
+      || new Set(question.parts?.map((part) => part.id)).size !== question.parts?.length) {
+      errors.push('AP Chemistry FRQs require unique structured parts')
+    }
+  }
+  if (question.stimulusId !== undefined && !ID_PATTERN.test(question.stimulusId)) {
+    errors.push('stimulusId must be a stable lowercase kebab-case identifier')
+  }
+}
+
 export function validateCanonicalQuestion(question) {
   const errors = []
   if (!question || typeof question !== 'object' || Array.isArray(question)) {
@@ -159,6 +202,7 @@ export function validateCanonicalQuestion(question) {
   validateAnswer(question, errors)
   validateSource(question.source, errors)
   validateContentMetadata(question.content, errors)
+  if (question.taxonomy?.subjectId === 'ap-chemistry') validateApChemistryEditorialMetadata(question, errors)
 
   if (question.tags !== undefined) {
     if (!Array.isArray(question.tags) || question.tags.some((tag) => !TAG_PATTERN.test(tag))) {

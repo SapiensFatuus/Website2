@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { getQuestions } from '../questions/questionData.js'
+import { draftCanonicalPracticeQuestions } from '../questions/catalog/index.js'
 import { completeSession, createSession } from '../questions/questionEngine.js'
 import {
   MASTERY_RECENT_WINDOW,
@@ -117,6 +118,28 @@ test('zero-attempt summaries retain canonical exam and subject context', () => {
   assert.equal(summary.attemptRecords.length, 0)
   assert.equal(summary.sessionRecord.examId, 'sat')
   assert.equal(summary.sessionRecord.subjectId, 'sat-math')
+  assert.equal(summary.sessionRecord.accuracyPercent, 0)
+})
+
+test('manual FRQ responses are never persisted as incorrect mastery attempts', () => {
+  const question = draftCanonicalPracticeQuestions.find(({ renderer }) => renderer === 'free-response')
+  const session = {
+    id: 'manual-frq-session',
+    status: 'complete',
+    config: { topic: 'ap-chemistry', mode: 'testing', filters: {} },
+    questionIds: [question.id],
+    answers: { [question.id]: 'A substantive written response.' },
+    submitted: {},
+    skipped: {},
+    startedAt: 1_000,
+    completedAt: 2_000,
+    completionReason: 'submitted',
+  }
+  const summary = calculateSessionSummary({ session, questions: [question] })
+  assert.equal(summary.grade.ungraded, 1)
+  assert.equal(summary.grade.incorrect, 0)
+  assert.equal(summary.attemptRecords.length, 0)
+  assert.equal(summary.sessionRecord.attemptedCount, 0)
   assert.equal(summary.sessionRecord.accuracyPercent, 0)
 })
 

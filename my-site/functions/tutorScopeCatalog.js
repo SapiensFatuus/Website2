@@ -161,7 +161,19 @@ export function getTutorScopeDetails(target) {
 }
 
 function includesPhrase(text, phrase) {
-  return text.includes(phrase.toLowerCase())
+  const normalizedPhrase = phrase.toLowerCase().trim()
+  if (!normalizedPhrase) return false
+  let start = text.indexOf(normalizedPhrase)
+  while (start >= 0) {
+    const end = start + normalizedPhrase.length
+    const requiresLeftBoundary = /[a-z0-9]/.test(normalizedPhrase[0])
+    const requiresRightBoundary = /[a-z0-9]/.test(normalizedPhrase.at(-1))
+    const hasLeftBoundary = start === 0 || !/[a-z0-9]/.test(text[start - 1])
+    const hasRightBoundary = end === text.length || !/[a-z0-9]/.test(text[end])
+    if ((!requiresLeftBoundary || hasLeftBoundary) && (!requiresRightBoundary || hasRightBoundary)) return true
+    start = text.indexOf(normalizedPhrase, start + 1)
+  }
+  return false
 }
 
 function scoreKeywords(text, keywords) {

@@ -4,7 +4,7 @@ import {
   createSkillPracticeUrl,
   exams,
 } from '../taxonomy/contentTaxonomy.js'
-import { getPublishedQuestionCount } from '../questions/catalog/index.js'
+import { getPublishedQuestionCount } from '../questions/catalog/publishedQuestionCounts.js'
 
 export const MAX_SKILL_SEARCH_LENGTH = 100
 

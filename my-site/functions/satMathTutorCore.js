@@ -113,11 +113,11 @@ export function buildTutorPromptParts(prompt, attachment = null) {
   ]
 }
 
-export function prepareTutorRequest(value) {
+export function prepareTutorRequest(value, { includeDraftMaterials = false } = {}) {
   const resolution = resolveEffectiveTutorTarget(value.target, value.message, value.history)
   if (!resolution) return null
   const scopeDetails = getTutorScopeDetails(resolution.target)
-  const contextPacks = getTutorContextPacksForTarget(resolution.target)
+  const contextPacks = getTutorContextPacksForTarget(resolution.target, { includeDrafts: includeDraftMaterials })
   const materials = selectRelevantMaterials(contextPacks, value.message, value.history)
   return { resolution, scopeDetails, contextPacks, materials }
 }

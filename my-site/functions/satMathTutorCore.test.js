@@ -10,6 +10,7 @@ import {
 import {
   getSupportedTutorTargets,
   getTutorContextPack,
+  getTutorContextPacksForTarget,
   tutorRegistry,
   validateTutorContextPacks,
 } from './tutorRegistry.js'
@@ -33,11 +34,201 @@ function request(target, message, history = []) {
 test('legacy grounding registry remains valid and available as optional material', () => {
   assert.equal(tutorRegistry.sat['sat-math'].algebra['linear-equations-one-variable'].label, 'Linear equations in one variable')
   assert.equal(tutorRegistry.sat['sat-math'].algebra['linear-functions'].label, 'Linear functions')
-  assert.equal(getSupportedTutorTargets().length, 6)
+  assert.equal(getSupportedTutorTargets().length, 90)
   const packs = [getTutorContextPack(equationTarget), getTutorContextPack(functionTarget)]
   assert.doesNotThrow(() => validateTutorContextPacks(packs))
   assert.ok(packs.every((pack) => pack.materialNotice.match(/not copied/i)))
   assert.throws(() => validateTutorContextPacks([packs[0], packs[0]]), /Duplicate tutor target/)
+})
+
+test('all twelve Unit 7 packs remain draft-only and cover canonical equilibrium skills', () => {
+  const equilibriumTarget = { scope: 'domain', examId: 'ap', subjectId: 'ap-chemistry', domainId: 'equilibrium' }
+  assert.deepEqual(getTutorContextPacksForTarget(equilibriumTarget), [])
+
+  const previewPacks = getTutorContextPacksForTarget(equilibriumTarget, { includeDrafts: true })
+  assert.equal(previewPacks.length, 12)
+  assert.ok(previewPacks.every((pack) => pack.reviewStatus === 'draft'))
+  assert.deepEqual(previewPacks.map((pack) => pack.target.skillId), [
+    'introduction-equilibrium',
+    'direction-reversible-reactions',
+    'reaction-quotient-equilibrium-constant',
+    'calculating-equilibrium-constant',
+    'magnitude-equilibrium-constant',
+    'properties-equilibrium-constant',
+    'calculating-equilibrium-concentrations',
+    'representations-equilibrium',
+    'introduction-le-chatelier-principle',
+    'reaction-quotient-le-chatelier-principle',
+    'introduction-solubility-equilibria',
+    'common-ion-effect',
+  ])
+  assert.equal(new Set(previewPacks.flatMap((pack) => pack.materials.map((material) => material.id))).size, 12)
+})
+
+test('all eleven Unit 8 packs remain draft-only and cover canonical acids-bases skills', () => {
+  const acidsBasesTarget = { scope: 'domain', examId: 'ap', subjectId: 'ap-chemistry', domainId: 'acids-bases' }
+  assert.deepEqual(getTutorContextPacksForTarget(acidsBasesTarget), [])
+
+  const previewPacks = getTutorContextPacksForTarget(acidsBasesTarget, { includeDrafts: true })
+  assert.equal(previewPacks.length, 11)
+  assert.ok(previewPacks.every((pack) => pack.reviewStatus === 'draft'))
+  assert.deepEqual(previewPacks.map((pack) => pack.target.skillId), [
+    'introduction-acids-bases',
+    'ph-poh-strong-acids-bases',
+    'weak-acid-base-equilibria',
+    'acid-base-reactions-buffers',
+    'acid-base-titrations',
+    'molecular-structure-acids-bases',
+    'ph-pka',
+    'properties-buffers',
+    'henderson-hasselbalch-equation',
+    'buffer-capacity',
+    'ph-solubility',
+  ])
+  assert.equal(new Set(previewPacks.flatMap((pack) => pack.materials.map((material) => material.id))).size, 11)
+  assert.ok(previewPacks.every((pack) => /original editorial/.test(pack.materialNotice)))
+})
+
+test('all thirteen Unit 3 packs remain draft-only and cover canonical properties-mixtures skills', () => {
+  const target = { scope: 'domain', examId: 'ap', subjectId: 'ap-chemistry', domainId: 'properties-substances-mixtures' }
+  assert.deepEqual(getTutorContextPacksForTarget(target), [])
+  const previewPacks = getTutorContextPacksForTarget(target, { includeDrafts: true })
+  assert.equal(previewPacks.length, 13)
+  assert.ok(previewPacks.every((pack) => pack.reviewStatus === 'draft'))
+  assert.deepEqual(previewPacks.map((pack) => pack.target.skillId), [
+    'intermolecular-interparticle-forces',
+    'properties-solids',
+    'solids-liquids-gases',
+    'ideal-gas-law',
+    'kinetic-molecular-theory',
+    'deviation-ideal-gas-law',
+    'solutions-mixtures',
+    'representations-solutions',
+    'separation-solutions-mixtures',
+    'solubility',
+    'spectroscopy-electromagnetic-spectrum',
+    'properties-photons',
+    'beer-lambert-law',
+  ])
+  assert.equal(new Set(previewPacks.flatMap((pack) => pack.materials.map(({ id }) => id))).size, 13)
+})
+
+test('all nine Unit 4 packs remain draft-only and cover canonical chemical-reaction skills', () => {
+  const target = { scope: 'domain', examId: 'ap', subjectId: 'ap-chemistry', domainId: 'chemical-reactions' }
+  assert.deepEqual(getTutorContextPacksForTarget(target), [])
+  const previewPacks = getTutorContextPacksForTarget(target, { includeDrafts: true })
+  assert.equal(previewPacks.length, 9)
+  assert.ok(previewPacks.every((pack) => pack.reviewStatus === 'draft'))
+  assert.deepEqual(previewPacks.map((pack) => pack.target.skillId), [
+    'introduction-reactions',
+    'net-ionic-equations',
+    'representations-reactions',
+    'physical-chemical-changes',
+    'stoichiometry',
+    'introduction-titration',
+    'types-chemical-reactions',
+    'introduction-acid-base-reactions',
+    'oxidation-reduction-reactions',
+  ])
+  assert.equal(new Set(previewPacks.flatMap((pack) => pack.materials.map(({ id }) => id))).size, 9)
+})
+
+test('all eleven Unit 5 packs remain draft-only and cover canonical kinetics skills', () => {
+  const target = { scope: 'domain', examId: 'ap', subjectId: 'ap-chemistry', domainId: 'kinetics' }
+  assert.deepEqual(getTutorContextPacksForTarget(target), [])
+  const previewPacks = getTutorContextPacksForTarget(target, { includeDrafts: true })
+  assert.equal(previewPacks.length, 11)
+  assert.ok(previewPacks.every((pack) => pack.reviewStatus === 'draft'))
+  assert.deepEqual(previewPacks.map((pack) => pack.target.skillId), [
+    'reaction-rates',
+    'introduction-rate-law',
+    'concentration-changes-time',
+    'elementary-reactions',
+    'collision-model',
+    'reaction-energy-profile',
+    'introduction-reaction-mechanisms',
+    'reaction-mechanism-rate-law',
+    'pre-equilibrium-approximation',
+    'multistep-reaction-energy-profile',
+    'catalysis',
+  ])
+  assert.equal(new Set(previewPacks.flatMap((pack) => pack.materials.map(({ id }) => id))).size, 11)
+})
+
+test('all nine Unit 6 packs remain draft-only and cover canonical thermochemistry skills', () => {
+  const target = { scope: 'domain', examId: 'ap', subjectId: 'ap-chemistry', domainId: 'thermochemistry' }
+  assert.deepEqual(getTutorContextPacksForTarget(target), [])
+  const previewPacks = getTutorContextPacksForTarget(target, { includeDrafts: true })
+  assert.equal(previewPacks.length, 9)
+  assert.ok(previewPacks.every((pack) => pack.reviewStatus === 'draft'))
+  assert.deepEqual(previewPacks.map((pack) => pack.target.skillId), [
+    'endothermic-exothermic-processes',
+    'energy-diagrams',
+    'heat-transfer-thermal-equilibrium',
+    'heat-capacity-calorimetry',
+    'energy-phase-changes',
+    'introduction-enthalpy-reaction',
+    'bond-enthalpies',
+    'enthalpy-formation',
+    'hess-law',
+  ])
+  assert.equal(new Set(previewPacks.flatMap((pack) => pack.materials.map(({ id }) => id))).size, 9)
+})
+
+test('all eight Unit 9 packs remain draft-only and cover canonical thermodynamics-electrochemistry skills', () => {
+  const target = { scope: 'domain', examId: 'ap', subjectId: 'ap-chemistry', domainId: 'thermodynamics-electrochemistry' }
+  assert.deepEqual(getTutorContextPacksForTarget(target), [])
+  const previewPacks = getTutorContextPacksForTarget(target, { includeDrafts: true })
+  assert.equal(previewPacks.length, 8)
+  assert.ok(previewPacks.every((pack) => pack.reviewStatus === 'draft'))
+  assert.deepEqual(previewPacks.map((pack) => pack.target.skillId), [
+    'introduction-entropy',
+    'absolute-entropy-entropy-change',
+    'gibbs-free-energy-thermodynamic-favorability',
+    'thermodynamic-kinetic-control',
+    'free-energy-equilibrium',
+    'free-energy-dissolution',
+    'coupled-reactions',
+    'galvanic-electrolytic-cells',
+  ])
+  assert.equal(new Set(previewPacks.flatMap((pack) => pack.materials.map(({ id }) => id))).size, 8)
+})
+
+test('all eight Unit 1 packs remain draft-only and cover canonical atomic-structure skills', () => {
+  const target = { scope: 'domain', examId: 'ap', subjectId: 'ap-chemistry', domainId: 'atomic-structure-properties' }
+  assert.deepEqual(getTutorContextPacksForTarget(target), [])
+  const previewPacks = getTutorContextPacksForTarget(target, { includeDrafts: true })
+  assert.equal(previewPacks.length, 8)
+  assert.ok(previewPacks.every((pack) => pack.reviewStatus === 'draft'))
+  assert.deepEqual(previewPacks.map((pack) => pack.target.skillId), [
+    'moles-molar-mass',
+    'mass-spectra-elements',
+    'elemental-composition-pure-substances',
+    'composition-mixtures',
+    'atomic-structure-electron-configuration',
+    'photoelectron-spectroscopy',
+    'periodic-trends',
+    'valence-electrons-ionic-compounds',
+  ])
+  assert.equal(new Set(previewPacks.flatMap((pack) => pack.materials.map(({ id }) => id))).size, 8)
+})
+
+test('all seven Unit 2 packs remain draft-only and cover canonical compound-structure skills', () => {
+  const target = { scope: 'domain', examId: 'ap', subjectId: 'ap-chemistry', domainId: 'compound-structure-properties' }
+  assert.deepEqual(getTutorContextPacksForTarget(target), [])
+  const previewPacks = getTutorContextPacksForTarget(target, { includeDrafts: true })
+  assert.equal(previewPacks.length, 7)
+  assert.ok(previewPacks.every((pack) => pack.reviewStatus === 'draft'))
+  assert.deepEqual(previewPacks.map((pack) => pack.target.skillId), [
+    'types-chemical-bonds',
+    'intramolecular-force-potential-energy',
+    'structure-ionic-solids',
+    'structure-metals-alloys',
+    'lewis-diagrams',
+    'resonance-formal-charge',
+    'vsepr-hybridization',
+  ])
+  assert.equal(new Set(previewPacks.flatMap((pack) => pack.materials.map(({ id }) => id))).size, 7)
 })
 
 test('canonical tutor targets support focused tutoring and general whole-test tutoring', () => {
@@ -91,6 +282,10 @@ test('AP Chemistry routing separates properties, thermochemistry, and thermodyna
 
   const entropy = resolveEffectiveTutorTarget(chemistryTarget, 'Explain entropy and Gibbs free energy.', [])
   assert.equal(entropy.target.domainId, 'thermodynamics-electrochemistry')
+
+  const titration = resolveEffectiveTutorTarget(chemistryTarget, 'How do I organize a titration calculation at equivalence?', [])
+  assert.equal(titration.target.domainId, 'chemical-reactions')
+  assert.equal(titration.target.skillId, 'introduction-titration')
 })
 
 test('preparation uses matching local material when available and never gates broader questions', () => {
@@ -110,7 +305,44 @@ test('preparation uses matching local material when available and never gates br
   assert.deepEqual(general.materials, [])
 
   const chemistry = prepareTutorRequest(request(chemistryTarget, 'How do I compare Q and K?'))
-  assert.deepEqual(chemistry.materials.map((item) => item.id), ['ap-chem-equilibrium-q-k-original-1'])
+  assert.deepEqual(chemistry.materials, [])
+
+  const chemistryPreview = prepareTutorRequest(
+    request(chemistryTarget, 'How do I compare Q and K?'),
+    { includeDraftMaterials: true },
+  )
+  assert.deepEqual(chemistryPreview.materials.map((item) => item.id), ['ap-chem-equilibrium-q-k-original-1'])
+
+  const acidsBasesPreview = prepareTutorRequest(
+    request(chemistryTarget, 'Why does acid make a carbonate solid more soluble?'),
+    { includeDraftMaterials: true },
+  )
+  assert.equal(acidsBasesPreview.resolution.target.domainId, 'acids-bases')
+  assert.deepEqual(acidsBasesPreview.materials.map((item) => item.id), ['ap-chem-acids-bases-ph-solubility-original-1'])
+
+  const unitThreePreview = prepareTutorRequest(
+    request(chemistryTarget, 'How do I use a Beer-Lambert calibration line?'),
+    { includeDraftMaterials: true },
+  )
+  assert.equal(unitThreePreview.resolution.target.domainId, 'properties-substances-mixtures')
+  assert.equal(unitThreePreview.resolution.target.skillId, 'beer-lambert-law')
+  assert.deepEqual(unitThreePreview.materials.map((item) => item.id), ['ap-chem-properties-mixtures-beer-lambert-original-1'])
+
+  const unitFourPreview = prepareTutorRequest(
+    request(chemistryTarget, 'How do I organize a titration calculation at equivalence?'),
+    { includeDraftMaterials: true },
+  )
+  assert.equal(unitFourPreview.resolution.target.domainId, 'chemical-reactions')
+  assert.equal(unitFourPreview.resolution.target.skillId, 'introduction-titration')
+  assert.deepEqual(unitFourPreview.materials.map((item) => item.id), ['ap-chem-chemical-reactions-titration-original-1'])
+
+  const unitFivePreview = prepareTutorRequest(
+    request(chemistryTarget, 'How do I determine a rate law from initial rates?'),
+    { includeDraftMaterials: true },
+  )
+  assert.equal(unitFivePreview.resolution.target.domainId, 'kinetics')
+  assert.equal(unitFivePreview.resolution.target.skillId, 'introduction-rate-law')
+  assert.deepEqual(unitFivePreview.materials.map((item) => item.id), ['ap-chem-kinetics-rate-law-original-1'])
 })
 
 test('prompt requires adaptive, pedagogical answers instead of context refusals', () => {

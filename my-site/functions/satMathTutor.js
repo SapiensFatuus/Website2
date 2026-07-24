@@ -1,5 +1,6 @@
 import { vertexAI } from '@genkit-ai/google-genai'
 import { genkit, z } from 'genkit'
+import process from 'node:process'
 import {
   buildTutorPrompt,
   buildTutorPromptParts,
@@ -43,7 +44,9 @@ const ai = genkit({ plugins: [vertexAI({ location: 'us-central1' })] })
 export async function runTutorRequest(input, attachment = null) {
   const validation = validateTutorRequest(input)
   if (!validation.valid) throw new Error(validation.error)
-  const prepared = prepareTutorRequest(validation.value)
+  const includeDraftMaterials = process.env.FUNCTIONS_EMULATOR === 'true'
+    && process.env.TUTOR_EDITORIAL_PREVIEW === 'true'
+  const prepared = prepareTutorRequest(validation.value, { includeDraftMaterials })
   if (!prepared) throw new Error('The tutor could not resolve this request scope.')
 
   const prompt = buildTutorPrompt({ ...validation.value, ...prepared })

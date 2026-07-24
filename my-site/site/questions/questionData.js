@@ -1,14 +1,20 @@
-import { canonicalPracticeQuestions } from './catalog/index.js'
+import { canonicalPracticeQuestions, draftCanonicalPracticeQuestions } from './catalog/index.js'
 import { legacyApChemistryPracticeQuestions } from './legacy/apChemistryAdapter.js'
+import { clientEnvironment } from '../environment.js'
 
 export const SUPPORTED_RENDERERS = new Set(['multiple-choice', 'grid-in', 'free-response'])
 
 // Compatibility export for the existing practice engine. SAT Math records come
 // from the validated canonical catalog; only AP Chemistry uses the legacy adapter.
-export const demoQuestions = Object.freeze([
-  ...canonicalPracticeQuestions,
-  ...legacyApChemistryPracticeQuestions,
-])
+export function createPracticeQuestionSet({ editorialPreview = false } = {}) {
+  return Object.freeze([
+    ...canonicalPracticeQuestions,
+    ...(editorialPreview ? draftCanonicalPracticeQuestions : []),
+    ...legacyApChemistryPracticeQuestions,
+  ])
+}
+
+export const demoQuestions = createPracticeQuestionSet({ editorialPreview: clientEnvironment.editorialPreview })
 
 function slugify(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')

@@ -1,0 +1,8 @@
+# Temporary credentials emitted by google-github-actions/auth.
+gha-creds-*.json
+
+# Local AP Chemistry reviewer packets may contain private reviewer notes.
+my-site/review-packets/
+
+# Local source-analysis intake stays outside the production content registry.
+my-site/metadata-intake/

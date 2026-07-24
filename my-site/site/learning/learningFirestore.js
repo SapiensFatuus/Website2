@@ -3,7 +3,7 @@ import {
   getDoc,
   runTransaction,
 } from 'firebase/firestore'
-import { db } from '../firebase.js'
+import { db } from '../firebaseFirestore.js'
 import {
   applyMasteryUpdate,
   buildLearningRecordPayload,
